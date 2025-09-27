@@ -4,6 +4,7 @@ Course Project for ROB-GY 7863A Planning, Learning, and Control for Autonomous S
 
 ### Team Member
 Zihan Liu
+
 Yipeng Wang
 
 ### Environment Setup
