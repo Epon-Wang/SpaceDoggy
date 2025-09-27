@@ -1,19 +1,14 @@
 # Terrain Generation Tool
 ## Usage
-1. First, install dependencies:
-```bash
-pip3 install noise opencv-python numpy 
-```
-2. Open `terrain_generator.py` and modify the initial configuration at the beginning. Here, we will use the Go2 robot as an example:
+1. Open `terrain_generator.py` and modify the initial configuration at the beginning. Here, we will use the Go2 robot as an example:
 ```python
 # Input scene file
 INPUT_SCENE_PATH = "./scene.xml"
 # Output
 OUTPUT_SCENE_PATH = "../scene_terrain.xml"
 ```
-3. Run:
+2. Run:
 ```bash
-cd terrain_tool
 python3 ./terrain_generator.py
 ```
 The program will output the terrain scene file to `/env/scene_terrain.xml`. Then, you can modify the simulator configuration file `/env/simulate_python/config.yaml` and set the scene to the newly generated `scene_terrain.xml`:
