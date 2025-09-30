@@ -10,7 +10,15 @@ Course Project for ROB-GY 7863A Planning, Learning, and Control for Autonomous S
 - [Zihan Liu](https://github.com/GuoZheXinDeGuang)
 
 - [Yipeng Wang](https://github.com/Epon-Wang)
-
+### Preparation
+Before setting up the environment, please do the following to install the unitree_sdk2_python:
+```bash
+cd ~
+sudo apt install python3-pip
+git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
+cd unitree_sdk2_python
+pip3 install -e .
+```
 ### Environment Setup
 1. Conda Environment
     ```bash
