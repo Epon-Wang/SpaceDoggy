@@ -1,4 +1,5 @@
 import time
+import math
 import mujoco
 import mujoco.viewer
 from threading import Thread
@@ -9,12 +10,39 @@ from unitree_sdk2py_bridge import UnitreeSdk2Bridge, ElasticBand
 
 import config
 
-
 locker = threading.Lock()
 
 mj_model = mujoco.MjModel.from_xml_path(config.ROBOT_SCENE)
 mj_data = mujoco.MjData(mj_model)
 
+# Set the starting point
+if hasattr(config, "START_HEIGHT"):
+
+    # Initial Position
+    mj_data.qpos[0] = getattr(config, "START_X", 0.0)
+    mj_data.qpos[1] = getattr(config, "START_Y", 0.0)
+    mj_data.qpos[2] = config.START_HEIGHT
+
+    # (roll, pitch, yaw)
+    roll  = float(getattr(config, "START_ROLL", 0.0))
+    pitch = float(getattr(config, "START_PITCH", 0.0))
+    yaw   = float(getattr(config, "START_YAW", 0.0))
+
+    cr, sr = math.cos(roll*0.5),  math.sin(roll*0.5)
+    cp, sp = math.cos(pitch*0.5), math.sin(pitch*0.5)
+    cy, sy = math.cos(yaw*0.5),   math.sin(yaw*0.5)
+
+    # (w, x, y, z)
+    qw = cr*cp*cy + sr*sp*sy
+    qx = sr*cp*cy - cr*sp*sy
+    qy = cr*sp*cy + sr*cp*sy
+    qz = cr*cp*sy - sr*sp*cy
+
+    mj_data.qpos[3:7] = [qw, qx, qy, qz]
+
+    mujoco.mj_forward(mj_model, mj_data)
+    print(f"[Init] Spawn at (x,y,z)=({mj_data.qpos[0]:.2f}, {mj_data.qpos[1]:.2f}, {mj_data.qpos[2]:.2f}), "
+          f"rpy=({roll:.2f},{pitch:.2f},{yaw:.2f}) rad")
 
 if config.ENABLE_ELASTIC_BAND:
     elastic_band = ElasticBand()
@@ -73,7 +101,6 @@ def PhysicsViewerThread():
         viewer.sync()
         locker.release()
         time.sleep(config.VIEWER_DT)
-
 
 if __name__ == "__main__":
     viewer_thread = Thread(target=PhysicsViewerThread)
