@@ -39,15 +39,15 @@ cd ./env/simulate_python
 python3 ./unitree_mujoco.py
 ```
 ### Parameters
-In config.py, we can set the initial position and euler angle of the robot
-    ```python
-    # Initial Position
-    START_X = 0.0       # Initial X
-    START_Y = 0.0       # Initial Y
-    START_HEIGHT = 2.0  # Initial Z
+In `config.py`, we can set the initial position and Euler angles of the robot:
 
-    # Euler Angle (Radian)
-    START_ROW = 0.0
-    START_PITCH = 0.0
-    START_YAW = 0.0
-This can best set to different values for experiment. 
+```python
+# Initial position (meters)
+START_X = 0.0        # Initial X
+START_Y = 0.0        # Initial Y
+START_HEIGHT = 2.0   # Initial Z (height)
+
+# Euler angles (radians)
+START_ROLL  = 0.0    # roll  (about x-axis)
+START_PITCH = 0.0    # pitch (about y-axis)
+START_YAW   = 0.0    # yaw   (about z-axis)

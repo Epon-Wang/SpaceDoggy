@@ -19,6 +19,6 @@ START_Y = 0.0       # Initial Y
 START_HEIGHT = 2.0  # Initial Z
 
 # Euler Angle (Radian)
-START_ROW = 0.0
+START_ROLL = 0.0
 START_PITCH = 0.0
 START_YAW = 0.0
