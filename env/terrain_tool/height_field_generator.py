@@ -4,7 +4,7 @@ import math
 from typing import Tuple
 
 # ---- Utility ---------------------------------------------------------------
-SAVE_PATH = "/home/zihan/Desktop/space_robo/SpaceDoggy/env/height_field.png"
+SAVE_PATH = "/home/zihan/SpaceDoggy/env/height_field.png"
 try:
     RES_BICUBIC = Image.Resampling.BICUBIC
 except AttributeError:
@@ -80,16 +80,13 @@ H = W = 2048
 base = np.ones((H, W), dtype=np.float32)*0.5
 
 # Gentle dunes (for 5m field, 1px≈5mm)
-add_dunes(base, amplitude=0.03, wavelength_px=140, direction_deg=28, asym=0.6)
-add_dunes(base, amplitude=0.02, wavelength_px=240, direction_deg=34, asym=0.6)
+add_dunes(base, amplitude=0.08, wavelength_px=900,  direction_deg=28, asym=0.6)
+add_dunes(base, amplitude=0.06, wavelength_px=1500, direction_deg=34, asym=0.6)
 
 # Sparse craters
 add_craters(base, count=20, rmin_px=100, rmax_px=240, dmin=0.015, dmax=0.08, seed=2025)
 
-# Smooth out
-base = gaussian_blur(base, sigma_px=2.5)
-base = blur_down_up(base, factor=2)
-base = normalize01(base)
-
+base = gaussian_blur(base, sigma_px=1.4)   
+base = np.clip(0.5 + 1.4*(base - 0.5), 0, 1) 
 save(base, SAVE_PATH, gamma=1.05)
 print("Saved: height_field.png")

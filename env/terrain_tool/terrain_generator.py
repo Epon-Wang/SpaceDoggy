@@ -3,8 +3,8 @@ import numpy as np
 import cv2
 import noise
 
-INPUT_SCENE_PATH = "/home/zihan/Desktop/space_robo/SpaceDoggy/env/terrain_tool/scene.xml"
-OUTPUT_SCENE_PATH = "/home/zihan/Desktop/space_robo/SpaceDoggy/env/scene_terrain.xml"
+INPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/terrain_tool/scene.xml"
+OUTPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/scene_terrain.xml"
 
 
 # zyx euler angle to quaternion
@@ -182,7 +182,7 @@ class TerrainGenerator:
             position=[1.0, 0.0, 0.0],  # position
             euler=[0.0, -0.0, 0.0],  # attitude
             size=[1.0, 1.0],  # width and length
-            height_scale=0.45,  # max height
+            height_scale=1.0,  # max height
             negative_height=0.2,  # height in the negative direction of z axis
             image_width=128,  # height field image size
             img_height=128,
