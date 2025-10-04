@@ -3,7 +3,7 @@ ROBOT_SCENE = "../scene_terrain.xml" # Robot scene
 DOMAIN_ID = 1 # Domain id
 INTERFACE = "lo" # Interface 
 
-USE_JOYSTICK = 0 # We are not using gamepad here
+USE_JOYSTICK = 0 # Whether to use Joystick or not
 JOYSTICK_TYPE = "xbox" # support "xbox" and "switch" gamepad layout
 JOYSTICK_DEVICE = 0 # Joystick number
 
