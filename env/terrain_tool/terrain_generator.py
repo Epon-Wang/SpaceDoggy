@@ -3,8 +3,8 @@ import numpy as np
 import cv2
 import noise
 
-INPUT_SCENE_PATH = "./scene.xml"
-OUTPUT_SCENE_PATH = "../scene_terrain.xml"
+INPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/terrain_tool/scene.xml"
+OUTPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/scene_terrain.xml"
 
 
 # zyx euler angle to quaternion
@@ -81,6 +81,11 @@ class TerrainGenerator:
         self.root = self.scene.getroot()
         self.worldbody = self.root.find("worldbody")
         self.asset = self.root.find("asset")
+    
+    def SetGravity(self, gravity=[0.0, 0.0, -9.81]):
+        option = xml_et.SubElement(self.root, "option")
+        option.attrib["gravity"] = list_to_str(gravity)
+        option.tail = "\n"
 
     # Add Box to scene
     def AddBox(self,
@@ -219,7 +224,7 @@ class TerrainGenerator:
             self,
             position=[1.0, 0.0, 0.0],  # position
             euler=[0.0, -0.0, 0.0],  # attitude
-            size=[2.0, 1.6],  # width and length
+            size=[100.0, 100.0],  # width and length
             height_scale=0.02,  # max height
             negative_height=0.1,  # height in the negative direction of z axis
             input_img=None,
@@ -259,10 +264,7 @@ class TerrainGenerator:
 if __name__ == "__main__":
     tg = TerrainGenerator()
 
-    # Rough ground
-    tg.AddRoughGround(init_pos=[-2.5, 5.0, 0.0],
-                      euler=[0, 0, 0.0],
-                      nums=[10, 8])
+    tg.SetGravity([0.0, 0.0, -1.0])
 
     # Perlin heigh field
     tg.AddPerlinHeighField(position=[-1.5, 4.0, 0.0], size=[2.0, 1.5])
