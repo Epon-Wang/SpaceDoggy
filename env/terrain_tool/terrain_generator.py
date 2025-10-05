@@ -220,6 +220,22 @@ class TerrainGenerator:
         quat = euler_to_quat(euler[0], euler[1], euler[2])
         geo.attrib["quat"] = list_to_str(quat)
 
+        # # Add Dynamics to the height field
+        # geo.attrib["margin"]   = "0.03"              # softer “skin” around surface
+        # geo.attrib["condim"]   = "3"
+        # geo.attrib["friction"] = "1.2 0.06 0.55"
+        # # spring-damper contact model: softer & underdamped = bouncy
+        # geo.attrib["solref"]   = "0.05 0.35"         # (timeconst=0.05, damping ratio=0.35)
+        # geo.attrib["solimp"]   = "0.70 0.97 0.06 0.5 2.2"  # softer start, thicker cushion
+
+        geo.attrib["margin"]   = "0.03"                 # modest soft skin
+        geo.attrib["condim"]   = "3"
+        geo.attrib["friction"] = "1.4 0.08 0.65"        # more stick (slide/spin/roll)
+
+        # Overdamped viscoelastic contact → sticky, little to no rebound
+        geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
+        geo.attrib["solimp"]   = "0.75 0.95 0.05 0.55 2.0"  # softer onset + thicker cushion
+
     def AddHeighFieldFromImage(
             self,
             position=[1.0, 0.0, 0.0],  # position

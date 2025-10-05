@@ -18,6 +18,6 @@
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
-  <geom type="hfield" hfield="perlin_hfield" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" /></worldbody>
+  <geom type="hfield" hfield="perlin_hfield" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" margin="0.03" condim="3" friction="1.4 0.08 0.65" solref="0.10 1.40" solimp="0.75 0.95 0.05 0.55 2.0" /></worldbody>
 <option gravity="0.0 0.0 -1.0" />
 </mujoco>
