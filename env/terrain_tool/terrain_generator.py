@@ -230,7 +230,7 @@ class TerrainGenerator:
 
         geo.attrib["margin"]   = "0.03"                 # modest soft skin
         geo.attrib["condim"]   = "3"
-        geo.attrib["friction"] = "1.4 0.08 0.65"        # more stick (slide/spin/roll)
+        geo.attrib["friction"] = "5.0 0.5 2.0"       # more stick (slide/spin/roll)
 
         # Overdamped viscoelastic contact → sticky, little to no rebound
         geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
@@ -283,6 +283,6 @@ if __name__ == "__main__":
     tg.SetGravity([0.0, 0.0, -1.0])
 
     # Perlin heigh field
-    tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[5.0, 5.0])
+    tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10.0, 10.0])
 
     tg.Save()

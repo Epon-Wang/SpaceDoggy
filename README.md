@@ -51,3 +51,28 @@ START_HEIGHT = 2.0   # Initial Z (height)
 START_ROLL  = 0.0    # roll  (about x-axis)
 START_PITCH = 0.0    # pitch (about y-axis)
 START_YAW   = 0.0    # yaw   (about z-axis)
+
+```
+### Terrain Generation
+Navigate to `./env/terrain_tool` and run the following command:
+```bash
+python3 height_field_generator.py
+```
+This will give you a height field image. Then run the following command:
+```bash
+python3 terrain_generator.py
+```
+This will give you the terrain MJCF file, which the dog will step on. 
+
+### Teleop
+Navigate to `./env/simulate_python` and start three terminals, run each command in its terminal in this sequence:
+```bash
+python3 teleop_keyboard.py
+```
+```bash
+python3 teleop_bridge.py
+```
+```bash
+python3 unitree_mujoco.py
+```
+Now you can see the dog walking on the terrain. You can make the dog move faster unsing the keyboard. For the detailed operation please refer to `teleop_keyboard.py`.

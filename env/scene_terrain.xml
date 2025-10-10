@@ -13,11 +13,11 @@
     <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
     <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
-  <hfield name="perlin_hfield" size="2.5 2.5 1.0 0.2" file="../height_field.png" /></asset>
+  <hfield name="perlin_hfield" size="5.0 5.0 1.0 0.2" file="../height_field.png" /></asset>
 
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
-  <geom type="hfield" hfield="perlin_hfield" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" margin="0.03" condim="3" friction="1.4 0.08 0.65" solref="0.10 1.40" solimp="0.75 0.95 0.05 0.55 2.0" /></worldbody>
-<option gravity="0.0 0.0 -1.0" />
+  <geom type="hfield" hfield="perlin_hfield" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" margin="0.03" condim="3" friction="1.6 0.12 0.06" solref="0.10 1.40" solimp="0.75 0.95 0.05 0.55 2.0" /></worldbody>
+<option gravity="0.0 0.0 -4.0" />
 </mujoco>

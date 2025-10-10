@@ -17,7 +17,7 @@ VIEWER_DT = 0.02  # 50 fps for viewer
 # Initial Position
 START_X = 0.0       # Initial X
 START_Y = 0.0       # Initial Y
-START_HEIGHT = 2.0  # Initial Z
+START_HEIGHT = 1.1  # Initial Z
 
 # Euler Angle (Radian)
 START_ROLL = 0.0
