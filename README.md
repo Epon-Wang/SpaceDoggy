@@ -58,7 +58,7 @@ Navigate to `./env/terrain_tool` and run the following command:
 ```bash
 python3 height_field_generator.py
 ```
-This will give you a height field image. Then run the following command:
+This will give you a height field image, to gain the image type you want, please refer to each generation type method and uncomment them if needed. Then run the following command:
 ```bash
 python3 terrain_generator.py
 ```

@@ -241,9 +241,9 @@ class TerrainGenerator:
             position=[1.0, 0.0, 0.0],  # position
             euler=[0.0, -0.0, 0.0],  # attitude
             size=[100.0, 100.0],  # width and length
-            height_scale=0.02,  # max height
+            height_scale=1.5,  # max height
             negative_height=0.1,  # height in the negative direction of z axis
-            input_img=None,
+            input_img='/home/zihan/SpaceDoggy/env/height_field.png',
             output_hfield_image="height_field.png",
             image_scale=[1.0, 1.0],  # reduce image resolution
             invert_gray=False):
@@ -273,6 +273,22 @@ class TerrainGenerator:
         quat = euler_to_quat(euler[0], euler[1], euler[2])
         geo.attrib["quat"] = list_to_str(quat)
 
+        # # Add Dynamics to the height field
+        # geo.attrib["margin"]   = "0.03"              # softer “skin” around surface
+        # geo.attrib["condim"]   = "3"
+        # geo.attrib["friction"] = "1.2 0.06 0.55"
+        # # spring-damper contact model: softer & underdamped = bouncy
+        # geo.attrib["solref"]   = "0.05 0.35"         # (timeconst=0.05, damping ratio=0.35)
+        # geo.attrib["solimp"]   = "0.70 0.97 0.06 0.5 2.2"  # softer start, thicker cushion
+
+        geo.attrib["margin"]   = "0.03"                 # modest soft skin
+        geo.attrib["condim"]   = "3"
+        geo.attrib["friction"] = "5.0 0.5 2.0"       # more stick (slide/spin/roll)
+
+        # Overdamped viscoelastic contact → sticky, little to no rebound
+        geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
+        geo.attrib["solimp"]   = "0.75 0.95 0.05 0.55 2.0"  # softer onset + thicker cushion
+
     def Save(self):
         self.scene.write(OUTPUT_SCENE_PATH)
 
@@ -284,5 +300,8 @@ if __name__ == "__main__":
 
     # Perlin heigh field
     tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10.0, 10.0])
+    # tg.AddHeighFieldFromImage(
+    #     position=[0.0, 0.0, 0.0],
+    #     size=[10.0,10.0])
 
     tg.Save()
