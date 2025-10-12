@@ -132,6 +132,22 @@ class TerrainGenerator:
         quat = euler_to_quat(euler[0], euler[1], euler[2])
         geo.attrib["quat"] = list_to_str(quat)
 
+    def AddReferencePlane(self,
+                         position=[0.0, 0.0, 0.05],
+                         size=[10, 10, 0.001],
+                         rgba=[0, 1, 0, 0.15]):
+
+        geo = xml_et.SubElement(self.worldbody, "geom")
+        geo.attrib["name"] = "ref_plane"
+        geo.attrib["type"] = "plane"
+        geo.attrib["pos"] = list_to_str(position)
+        geo.attrib["quat"] = list_to_str([1, 0, 0, 0])
+        geo.attrib["size"] = list_to_str(size)
+        geo.attrib["rgba"] = list_to_str(rgba)
+        geo.attrib["contype"] = str(0)
+        geo.attrib["conaffinity"] = str(0)
+        geo.attrib["group"] = str(1)
+
     def AddStairs(self,
                   init_pos=[1.0, 0.0, 0.0],
                   yaw=0.0,
@@ -315,13 +331,19 @@ class TerrainGenerator:
 if __name__ == "__main__":
     tg = TerrainGenerator()
 
-    tg.SetGravity([0.0, 0.0, -1.0])
+    tg.SetGravity()
     
     # Set robot spawn position
-    tg.SetRobotSpawnPosition([0.0, 0.0, 1.5])
+    tg.SetRobotSpawnPosition()
+    
+    # Add reference plane (green, semi-transparent)
+    tg.AddReferencePlane(
+        position=[0, 0, 0.05],
+        size=[10, 10, 0.001],
+        rgba=[0, 1, 0, 0.15])
 
-    # Perlin heigh field
-    tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10.0, 10.0])
+    # Perlin height field
+    # tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10.0, 10.0])
     # tg.AddHeighFieldFromImage(
     #     position=[0.0, 0.0, 0.0],
     #     size=[10.0,10.0])
