@@ -3,8 +3,9 @@ import numpy as np
 import cv2
 import noise
 
-INPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/terrain_tool/scene.xml"
-OUTPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/scene_terrain.xml"
+INPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/terrain_tool/scene.xml"
+OUTPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/scene_terrain.xml"
+GO2_ROBOT_PATH = "/home/epon/SpaceDoggy/env/go2.xml"
 
 
 # zyx euler angle to quaternion
@@ -78,14 +79,31 @@ class TerrainGenerator:
 
     def __init__(self) -> None:
         self.scene = xml_et.parse(INPUT_SCENE_PATH)
+        self.robot = xml_et.parse(GO2_ROBOT_PATH)
         self.root = self.scene.getroot()
+        self.robotRoot = self.robot.getroot()
         self.worldbody = self.root.find("worldbody")
+        self.robotWorldbody = self.robotRoot.find("worldbody")
         self.asset = self.root.find("asset")
     
     def SetGravity(self, gravity=[0.0, 0.0, -9.81]):
         option = xml_et.SubElement(self.root, "option")
         option.attrib["gravity"] = list_to_str(gravity)
         option.tail = "\n"
+    
+    def SetRobotSpawnPosition(self, position=[0.0, 0.0, 0.445]):
+        # Check if base_link already exists in worldbody
+        base_link = None
+        for body in self.robotWorldbody.findall("body"):
+            if body.get("name") == "base_link":
+                base_link = body
+                break
+        
+        if base_link is not None:
+            base_link.attrib["pos"] = list_to_str(position)
+        else:
+            raise ValueError("base_link body not found in robot XML.")
+        base_link.tail = "\n"
 
     # Add Box to scene
     def AddBox(self,
@@ -243,7 +261,7 @@ class TerrainGenerator:
             size=[100.0, 100.0],  # width and length
             height_scale=1.5,  # max height
             negative_height=0.1,  # height in the negative direction of z axis
-            input_img='/home/zihan/SpaceDoggy/env/height_field.png',
+            input_img='/home/epon/SpaceDoggy/env/height_field.png',
             output_hfield_image="height_field.png",
             image_scale=[1.0, 1.0],  # reduce image resolution
             invert_gray=False):
@@ -291,12 +309,16 @@ class TerrainGenerator:
 
     def Save(self):
         self.scene.write(OUTPUT_SCENE_PATH)
+        self.robot.write(GO2_ROBOT_PATH)
 
 
 if __name__ == "__main__":
     tg = TerrainGenerator()
 
     tg.SetGravity([0.0, 0.0, -1.0])
+    
+    # Set robot spawn position
+    tg.SetRobotSpawnPosition([0.0, 0.0, 1.5])
 
     # Perlin heigh field
     tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10.0, 10.0])
