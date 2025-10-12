@@ -33,12 +33,13 @@ pip3 install -e .
     ```
 
 
-### Test Simulator
+### Simulator
 ```bash
 cd ./env/simulate_python
 python3 ./unitree_mujoco.py
 ```
-### Parameters
+
+### Quadruped Spawn
 In `config.py`, we can set the initial position and Euler angles of the robot:
 
 ```python
@@ -64,15 +65,21 @@ python3 terrain_generator.py
 ```
 This will give you the terrain MJCF file, which the dog will step on. 
 
-### Teleop
+### Keyboard Teleop
 Navigate to `./env/simulate_python` and start three terminals, run each command in its terminal in this sequence:
 ```bash
 python3 teleop_keyboard.py
-```
-```bash
 python3 teleop_bridge.py
-```
-```bash
 python3 unitree_mujoco.py
 ```
 Now you can see the dog walking on the terrain. You can make the dog move faster unsing the keyboard. For the detailed operation please refer to `teleop_keyboard.py`.
+
+### Testing Script
+First, navigate to `./env/simulate_python` to start the simulator
+```bash
+python3 unitree_mujoco.py
+```
+Then, navigate to `./script/test` and start the testing script
+```bash
+python3 name_of_example.py
+```
