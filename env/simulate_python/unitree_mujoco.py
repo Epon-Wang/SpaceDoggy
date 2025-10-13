@@ -25,8 +25,8 @@ FOOT_GEOMS_NAMES = ["FL", "FR", "RL", "RR"]  # four feet geom names from go2.xml
 plane_id = mj_model.geom(REF_PLANE_NAME).id
 foot_ids = {name: mj_model.geom(name).id for name in FOOT_GEOMS_NAMES}
 
-# print("Plane ID:", plane_id)
-# print("Foot Geom IDs:", foot_ids)
+print("Plane ID:", plane_id)
+print("Foot Geom IDs:", foot_ids)
 
 granular_modules = GranularModules(planeID=plane_id, footIDs=foot_ids)
 
@@ -106,11 +106,11 @@ def PhysicsViewerThread():
             with viewer.lock():
                 viewer.opt.flags[:] = vis_options.flags[:]
 
-        # Monitor foot distances
-        try:
-            granular_modules.distPlane2Foot(mj_data)
-        except Exception as e:
-            print(f"Error monitoring foot distances: {e}")
+        # Monitor Foot Status: z, z_dot, z_ddot
+        # 1. `monitor = False` if you felt it too verbose
+        # 2. please refer to granular_module.py for the meanings of these variables
+        granular_modules.distPlane2Foot(mj_data, monitor=True)
+        granular_modules.velAccPlane2Foot(mj_model, mj_data, monitor=True)
 
         viewer.sync()
         locker.release()
