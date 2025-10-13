@@ -19,16 +19,35 @@ mj_data = mujoco.MjData(mj_model)
 
 
 REF_PLANE_NAME = "ref_plane"
+GND_PLANE_NAME = "floor"
 FOOT_GEOMS_NAMES = ["FL", "FR", "RL", "RR"]  # four feet geom names from go2.xml
 
 # Get geom ids for the ground
-plane_id = mj_model.geom(REF_PLANE_NAME).id
+ref_plane_id = mj_model.geom(REF_PLANE_NAME).id
+gnd_plane_id = mj_model.geom(GND_PLANE_NAME).id
 foot_ids = {name: mj_model.geom(name).id for name in FOOT_GEOMS_NAMES}
 
-print("Plane ID:", plane_id)
+print("Reference Plane ID:", ref_plane_id)
+print("Ground Plane ID:", gnd_plane_id)
 print("Foot Geom IDs:", foot_ids)
 
-granular_modules = GranularModules(planeID=plane_id, footIDs=foot_ids)
+granular_modules = GranularModules(
+    refPlaneID=ref_plane_id, 
+    gndPlaneID=gnd_plane_id, 
+    footIDs=foot_ids, 
+    footNames=FOOT_GEOMS_NAMES
+)
+
+# Data recording setup
+RECORD_DURATION = 10.0  # seconds
+footData = {
+    'time':     [],
+    'z':        {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [distances]}
+    'z_dot':    {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [velocities]}
+    'z_ddot':   {name: [] for name in FOOT_GEOMS_NAMES}     # {foot_name: [accelerations]}
+}
+rec_init_t = None
+isRecording = False
 
 # Setup contact force visualization options
 vis_options = None
@@ -42,9 +61,9 @@ if config.ENABLE_CONTACT_FORCE_VISUALIZATION:
     
     # Adjust scales for better contact visualization
     mj_model.vis.scale.contactwidth = 0.3    # Contact point width
-    mj_model.vis.scale.contactheight = 0.02   # Contact point height
-    mj_model.vis.scale.forcewidth = 0.05      # Force arrow width (thickness)
-    mj_model.vis.map.force = 0.03              # Force arrow length scale (MAIN PARAMETER for arrow length)
+    mj_model.vis.scale.contactheight = 0.02  # Contact point height
+    mj_model.vis.scale.forcewidth = 0.05     # Force arrow width (thickness)
+    mj_model.vis.map.force = 0.03            # Force arrow length scale (MAIN PARAMETER for arrow length)
 
 
 if config.ENABLE_ELASTIC_BAND:
@@ -82,6 +101,26 @@ def SimulationThread():
 
         locker.acquire()
 
+
+
+        # Apply granular media forces to each foot
+        # =================================================================================
+        params_FL = granular_modules.get_GM_ParamsFromModel(mj_model, foot_ids["FL"])
+        params_all = {name: params_FL for name in foot_ids.keys()}
+
+        forces = granular_modules.compute_GM_AllFoot(
+            mj_model, mj_data, paramsPerFoot=params_all, monitor=True
+        )
+
+        mj_data.xfrc_applied[:] = 0.0
+        for foot_name, gid in foot_ids.items():
+            body_id = mj_model.geom_bodyid[gid]
+            f_world = forces[foot_name]
+            mj_data.xfrc_applied[body_id, :3] += f_world
+        # =================================================================================
+
+
+
         if config.ENABLE_ELASTIC_BAND:
             if elastic_band.enable:
                 mj_data.xfrc_applied[band_attached_link, :3] = elastic_band.Advance(
@@ -99,25 +138,65 @@ def SimulationThread():
 
 
 def PhysicsViewerThread():
+    global rec_init_t, isRecording
+
     while viewer.is_running():
         locker.acquire()
         # Apply options for contact force visualization 
         if vis_options is not None:
             with viewer.lock():
                 viewer.opt.flags[:] = vis_options.flags[:]
+        
+        # =================================================================================
+        # Monitor Foot-Ground Contact Status
+        # contact_info = []
+        # for foot_name, foot_id in foot_ids.items():
+        #     hasContact, _ = granular_modules.isFootFloorContact(mj_data, foot_id)
+        #     contact_info.append(f"{foot_name}: {'Contact' if hasContact else 'No Contact'}")
+        # print("Foot Contacts: " + ", ".join(contact_info))
 
-        # Monitor Foot Status: z, z_dot, z_ddot
+        # =================================================================================
+        # Monitor Foot Normal Data Status: z, z_dot, z_ddot
         # 1. `monitor = False` if you felt it too verbose
         # 2. please refer to granular_module.py for the meanings of these variables
-        # granular_modules.distPlane2Foot(mj_data, monitor=True)
-        # granular_modules.velAccPlane2Foot(mj_model, mj_data, monitor=True)
+        dist = granular_modules.distPlane2Foot(mj_data, monitor=True)
+        velAcc = granular_modules.velAccPlane2Foot(mj_model, mj_data, monitor=False)
 
-        params_FL = granular_modules._build_gm_params_from_model(mj_model, foot_ids["FL"])
-        params_all = {name: params_FL for name in foot_ids.keys()}
+        # --------------------------------------------------------------------------------
+        # Foot Normal Data recording logic
+        curr_t = time.time()
+        
+        if not isRecording:
+            # Start recording
+            rec_init_t = curr_t
+            isRecording = True
+            print("Started recording foot data for 10 seconds...")
+        
+        if isRecording:
+            elapsed_t = curr_t - rec_init_t
 
-        granular_modules.compute_gm_forces_for_all_feet(
-            mj_model, mj_data, params_per_foot=params_all, use_ema=True, monitor=True
-        )
+            # Data Recording
+            if elapsed_t <= RECORD_DURATION:
+                footData['time'].append(elapsed_t)
+                
+                # Record z
+                for foot_name, distData in dist.items():
+                    footData['z'][foot_name].append(distData)
+                
+                # Record z_dot, z_ddot
+                for foot_name, velAccData in velAcc.items():
+                    footData['z_dot'][foot_name].append(velAccData['z_dot'])
+                    footData['z_ddot'][foot_name].append(velAccData['z_ddot'])
+
+            # Data Visualization
+            else:
+                isRecording = False
+                granular_modules.plotDataPlane2Foot(footData)
+        
+        # =================================================================================
+
+
+
         viewer.sync()
         locker.release()
         time.sleep(config.VIEWER_DT)

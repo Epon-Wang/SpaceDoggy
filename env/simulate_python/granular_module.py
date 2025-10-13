@@ -1,20 +1,117 @@
+from unicodedata import name
 import mujoco
 import numpy as np
+import matplotlib.pyplot as plt
 import math
 
 
 class GranularModules:
     def __init__(
             self, 
-            planeID: int,   # plane geom ID
-            footIDs: dict   # dictionary of foot geom Names & IDs
+            refPlaneID: int,    # reference plane geom ID
+            gndPlaneID: int,    # ground plane geom ID
+            footIDs:    dict,   # dictionary of foot geom Names & IDs
+            footNames:  list    # list of foot geom Names
         ) -> None:
-        self.planeID = planeID
+        self.refPlaneID = refPlaneID
+        self.gndPlaneID = gndPlaneID
         self.footIDs = footIDs
+        self.footNames = footNames
 
         self.prev_zdot = {name: 0.0 for name in footIDs.keys()}
         self.prev_time = None
     
+
+
+    def isFootFloorContact(
+            self,
+            mj_data: mujoco.MjData, 
+            foot_geom_id: int
+        ) -> tuple:
+        """
+        Input:
+            - mj_data:      mujoco.MjData object
+            - foot_geom_id: geom ID of the foot
+        Output:
+            - whether the foot is in contact with the floor
+            - minimum distance between the foot and the floor
+        Note:
+            - min_dist = infinity if no contact
+        """
+        minDist = None
+        hasContact = False
+        for k in range(mj_data.ncon):
+            con = mj_data.contact[k]
+            g1, g2 = int(con.geom1), int(con.geom2)
+            if (g1 == foot_geom_id and g2 == self.gndPlaneID) or (g1 == self.gndPlaneID and g2 == foot_geom_id):
+                hasContact = True
+                d = float(con.dist)
+                minDist = d if minDist is None else min(minDist, d)
+
+        if minDist is None:
+            minDist = float("inf")
+        
+        return hasContact, minDist
+    
+
+
+    def plotDataPlane2Foot(
+            self,
+            data: dict
+        ) -> None:
+        """
+        Input:
+            - data: dict containing recorded foot data
+        Output:
+            - saved plot in folder
+        """
+        
+        if not data['time']:
+            print("No data recorded to plot!")
+            return
+
+        tArray = np.array(data['time'])
+
+        fig, axes = plt.subplots(3, 1, figsize=(12, 10))
+        fig.suptitle('Foot Data w/ Respect to Reference Plane', fontsize=16)
+
+        colors = {'FL':'red', 'FR':'blue', 'RL':'green', 'RR':'orange'}
+
+        # Plot distances (z)
+        axes[0].set_title('z of Foot (Normal Distances)')
+        axes[0].set_ylabel('z(m)')
+        for foot in self.footNames:
+            if foot in data['z']:
+                z = np.array(data['z'][foot])
+                axes[0].plot(tArray, z, label=foot, color=colors[foot], linewidth=2)
+        axes[0].legend()
+        axes[0].grid(True)
+        
+        # Plot velocities (z_dot)
+        axes[1].set_title('z_dot of Foot (Normal Velocities)')
+        axes[1].set_ylabel('z_dot(m/s)')
+        for foot in self.footNames:
+            if foot in data['z_dot']:
+                z_dot = np.array(data['z_dot'][foot])
+                axes[1].plot(tArray, z_dot, label=foot, color=colors[foot], linewidth=2)
+        axes[1].legend()
+        axes[1].grid(True)
+        
+        # Plot accelerations (z_ddot)
+        axes[2].set_title('z_ddot of Foot (Normal Accelerations)')
+        axes[2].set_ylabel('z_ddot(m/s²)')
+        axes[2].set_xlabel('Time (s)')
+        for foot in self.footNames:
+            if foot in data['z_ddot']:
+                z_ddot = np.array(data['z_ddot'][foot])
+                axes[2].plot(tArray, z_ddot, label=foot, color=colors[foot], linewidth=2)
+        axes[2].legend()
+        axes[2].grid(True)
+        
+        plt.tight_layout()
+        plt.savefig('foot_data_wr2_ref_plane.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
 
 
     def planeCenterNormal(
@@ -28,13 +125,13 @@ class GranularModules:
             - normal vector & center of the plane
         """
         # Rotation Matrix of the reference plane
-        R = np.array(mjData.geom_xmat[self.planeID]).reshape(3, 3)
+        R = np.array(mjData.geom_xmat[self.refPlaneID]).reshape(3, 3)
 
         # 3rd column of R = z-axis vector = normal vector
         n = R[:, 2]
         
         # Center of the plane
-        p0 = mjData.geom_xpos[self.planeID].copy()
+        p0 = mjData.geom_xpos[self.refPlaneID].copy()
 
         return n, p0
     
@@ -130,171 +227,234 @@ class GranularModules:
 
         return velAcc
     
-    # Read the parameters from the model
-    def _num_scalar(self, mjModel: mujoco.MjModel, name: str) -> float:
-        """读 <custom><numeric name=... data=...> 的标量；缺就抛错。"""
+
+
+    def modelNumericReader(
+            self, 
+            mjModel:    mujoco.MjModel, 
+            name:       str
+        ) -> float:
+        """
+        Input:
+            - mjModel: mujoco.MjModel object
+            - name:    name of the numeric parameter in the model
+        Output:
+            - value of the numeric parameter
+        Note:
+            - The numeric parameter must be scalar
+            - Parameters are under <custom> tag: <numeric name=... data=...>
+        """
+
         idx = mujoco.mj_name2id(mjModel, mujoco.mjtObj.mjOBJ_NUMERIC, name)
+
         if idx < 0:
             raise KeyError(f"Missing <numeric name='{name}'> in model.")
+        
         adr = mjModel.numeric_adr[idx]
         sz  = mjModel.numeric_size[idx]
+
         if sz != 1:
             raise ValueError(f"<numeric name='{name}'> must be scalar, got size={sz}.")
+        
         return float(mjModel.numeric_data[adr])
 
-    def _build_gm_params_from_model(self, mjModel: mujoco.MjModel, foot_geom_id: int) -> dict:
-        """从模型读取所有 GM 参数 + 圆脚半径换算 A,P。"""
-        # 圆脚半径（MuJoCo: geom_size[0] 就是半径）
-        R = float(mjModel.geom_size[foot_geom_id, 0])
-        if R <= 0:
-            raise ValueError(f"Invalid foot radius: {R}")
-        A = math.pi * R * R
-        P = 2.0 * math.pi * R
 
-        # 其余来自 <numeric>
+
+    def get_GM_ParamsFromModel(
+            self, 
+            mjModel: mujoco.MjModel, 
+            footID: int
+        ) -> dict:
+        """
+        Input:
+            - mjModel: mujoco.MjModel object
+            - footID:  geom ID of the foot
+        Output:
+            - dictionary of F_GM parameters for the foot
+        """
+        
+        # Intruder Radius
+        r = float(mjModel.geom_size[footID, 0])
+
+        if r <= 0:
+            raise ValueError(f"Invalid foot radius: {r}")
+        
+        A = math.pi * r * r     # Intruder cross-sectional area
+        P = 2.0 * math.pi * r   # Intruder perimeter
+
+        # Other parameters from env model
         return dict(
-            A=A, P=P,
-            theta=self._num_scalar(mjModel, "gm_theta"),
-            nu=   self._num_scalar(mjModel, "gm_nu"),
-            z0=   self._num_scalar(mjModel, "gm_z0"),
-            phi=  self._num_scalar(mjModel, "gm_phi"),
-            rho=  self._num_scalar(mjModel, "gm_rho"),
-            c_g=  self._num_scalar(mjModel, "gm_cg"),
-            c_d=  self._num_scalar(mjModel, "gm_cd"),
-            sigma_flat=self._num_scalar(mjModel, "gm_sigma_flat"),
-            epsilon_f=self._num_scalar(mjModel, "gm_eps_f"),
+            A=      A,
+            P=      P,
+            theta=  self.modelNumericReader(mjModel, "gm_theta"),
+            nu=     self.modelNumericReader(mjModel, "gm_nu"),
+            z0=     self.modelNumericReader(mjModel, "gm_z0"),
+            phi=    self.modelNumericReader(mjModel, "gm_phi"),
+            rho=    self.modelNumericReader(mjModel, "gm_rho"),
+            c_g=    self.modelNumericReader(mjModel, "gm_cg"),
+            c_d=    self.modelNumericReader(mjModel, "gm_cd"),
+            sigma_flat= self.modelNumericReader(mjModel, "gm_sigma_flat"),
+            epsilon_f=  self.modelNumericReader(mjModel, "gm_eps_f"),
             sigma_cone=(
-                self._num_scalar(mjModel, "gm_sigma_cone")
+                self.modelNumericReader(mjModel, "gm_sigma_cone")
                 if mujoco.mj_name2id(mjModel, mujoco.mjtObj.mjOBJ_NUMERIC, "gm_sigma_cone") >= 0
                 else 0.0
             ),
-            ema_alpha_base=0.8,   # 平滑（可按需改）
-            ema_rate_c_r=0.0,
+            ema_alpha_base= 0.8, # EMA smoothing factor
+            ema_rate_c_r=   0.0,
         )
 
-        
-    def compute_gm_force(
-    self,
-    foot_name: str,
-    z: float,
-    z_dot: float,
-    z_ddot: float,
-    params: dict,
-    use_ema: bool = True,
-    update_state: bool = True,
-) -> float:
+
+
+    def compute_GM_SingleFoot(
+            self,
+            footName:   str,
+            z:          float,
+            z_dot:      float,
+            z_ddot:     float,
+            params:     dict
+        ) -> float:
         """
-        返回沿参考平面法向的标量 F_GM（单位 N）。
-        依赖输入：z, z_dot, z_ddot（你已有），params（第1步构造）。
+        Input:
+            - footName:     name of the foot
+            - z:            penetration depth (>=0)
+            - z_dot:        penetration velocity (>=0)
+            - z_ddot:       penetration acceleration
+            - params:       dictionary of F_GM parameters for the foot
+        Output:
+            - F_GM force of one single foot
         """
-        # --- 持久状态（每只脚的 z_max、EMA） ---
+
         if not hasattr(self, "gm_state"):
             self.gm_state = {
                 name: {"z_max": -1e9, "F_ema": 0.0, "tau_r": 0.0}
                 for name in self.footIDs.keys()
             }
-        st = self.gm_state[foot_name]
+        st = self.gm_state[footName]
 
-        # --- 读参数 ---
-        A = float(params["A"]);       P = float(params["P"])
-        theta = float(params["theta"]); nu = float(params["nu"]); z0 = float(params.get("z0", 0.0))
-        phi = float(params["phi"]);   rho = float(params["rho"]); c_g = float(params["c_g"])
-        c_d = float(params["c_d"]);   sigma_flat = float(params["sigma_flat"])
-        sigma_cone = float(params.get("sigma_cone", 0.0))
-        eps_f = float(params.get("epsilon_f", 1e-4))
-        ema_alpha_base = float(params.get("ema_alpha_base", 0.8))
-        ema_rate_c_r = float(params.get("ema_rate_c_r", 0.0))
+        # parameters
+        A =     float(params["A"])
+        P =     float(params["P"])
+        theta = float(params["theta"])
+        nu =    float(params["nu"])
+        z0 =    float(params.get("z0", 0.0))
+        phi =   float(params["phi"])
+        rho =   float(params["rho"])
+        c_g =   float(params["c_g"])
+        c_d =   float(params["c_d"])
+        sigma_flat =        float(params["sigma_flat"])
+        sigma_cone =        float(params.get("sigma_cone", 0.0))
 
-        # --- 几何：S11 平面面积 + 原函数 ---
-        rh = 2.0 * A / P           # 圆脚：= R
-        alpha = nu / math.tan(theta)
         dz = z - z0
-        core = max(rh - alpha * dz, 0.0)
-        A_flat = math.pi * core * core
-        I_flat = math.pi * (
-            (rh * rh) * z
-            - rh * alpha * (dz ** 2)
-            + (alpha * alpha) * (dz ** 3) / 3.0
-        )
-        # 侧锥项（若暂不启用，可保持 0）
+        rh = 2.0 * A / P
+        alpha = nu / math.tan(theta)
+
+        # surface area of the developing cone & its integral
         A_cone = 0.0
-        I_cone = 0.0
-
-        # --- 附加质量与导数 ---
-        m_a = -c_g * phi * rho * nu * I_flat
-        dm_a_dz = -c_g * phi * rho * nu * A_flat
-        m_a_dot = dm_a_dz * z_dot
-
-        # --- 势力 + 惯性/阻尼 ---
-        F_p = sigma_flat * I_flat + sigma_cone * I_cone
-        F_raw = F_p - c_d * m_a_dot * z_dot - m_a * z_ddot
-
-        if z <= 0.0:
-            F_act = 0.0
+        I_cone = 0.0 # I_cone = integral of A_cone
+        
+        core = rh - alpha * dz
+        if core > 0.0:
+            A_flat = math.pi * core * core
+            I_flat = math.pi * ((rh*rh)*dz - rh*alpha*(dz**2) + (alpha*alpha)*(dz**3)/3.0)
         else:
-            F_act = F_raw
+            A_flat = 0.0
+            I_flat = 0.0 # I_flat = integral of A_flat
 
-        # --- EMA 平滑（可选） ---
-        if use_ema:
-            if ema_rate_c_r > 0.0 and update_state:
-                st["tau_r"] = min(1.0, st["tau_r"] + ema_rate_c_r)
-            alpha_ema = ema_alpha_base
-            F_out = (1.0 - alpha_ema) * st["F_ema"] + alpha_ema * F_act
-            if update_state:
-                st["F_ema"] = F_out
-        else:
-            F_out = F_act
+        # added-mass
+        m_a     = c_g * phi * rho * nu * I_flat
+        m_a_dot = (c_g * phi * rho * nu * A_flat) * z_dot # (dm_a/dz)* (dz/dt)
 
-        return float(F_out)
+        # quasistatic force
+        F_p   = sigma_flat * I_flat + sigma_cone * I_cone
 
-    def compute_gm_forces_for_all_feet(
-    self,
-    mjModel: mujoco.MjModel,
-    mjData: mujoco.MjData,
-    params_per_foot: dict | None = None,  # 可给每只脚不同 params
-    use_ema: bool = True,
-    monitor: bool = False,
-) -> dict:
+        # raw F_GM
+        F_out_raw = F_p - c_d * m_a_dot * z_dot - m_a * z_ddot
+
+        # z > 0 means foot is penetrating
+        F_out = max(0.0, F_out_raw if z > 0.0 else 0.0)
+
+        return F_out
+
+
+
+    def compute_GM_AllFoot(
+            self,
+            mjModel:        mujoco.MjModel,
+            mjData:         mujoco.MjData,
+            paramsPerFoot:  dict | None = None,
+            monitor:        bool = False,
+        ) -> dict:
         """
-        返回 {foot_name: np.array([Fx,Fy,Fz])}，世界系。
-        params_per_foot: 若为 None，则默认用 FL 的半径构造一份 params 给所有脚；
-                        若为 dict，形如 {'FL': params_FL, ...}
+        Input:
+            - mjModel:      mujoco.MjModel object
+            - mjData:       mujoco.MjData object
+            - paramPerFoot: dict of customized params for each foot, or None to use FL's params for all
+            - monitor:      print the computed forces for monitoring purposes
+        Output:
+            - dictionary of foot names with respoective F_GM {foot_name: np.array([Fx,Fy,Fz])} in global frame
+        Note:
+            - paramPerFoot dict example: {'FL': params_FL, ...}
         """
-        # 1) 法向
+
+        eps_depth = 1e-5
+        eps_speed = 1e-5
+        delta = 0.001  # distance for force fade-out
+
+        # normal vector of reference plane
         n, _ = self.planeCenterNormal(mjData)
         n = np.asarray(n, float)
 
-        # 2) z、z_dot、z_ddot
-        z_dict = self.distPlane2Foot(mjData, monitor=False)
-        va_dict = self.velAccPlane2Foot(mjModel, mjData, monitor=False)
+        # extract z, z_dot, z_ddot
+        z_dict =    self.distPlane2Foot(mjData, monitor=False)
+        va_dict =   self.velAccPlane2Foot(mjModel, mjData, monitor=False)
 
-        # 3) 若未提供每脚参数，则用 FL 的几何构一份通用
-        if params_per_foot is None:
+        # configure custom foot params if not given
+        if paramsPerFoot is None:
             if "FL" not in self.footIDs:
                 any_name = next(iter(self.footIDs.keys()))
                 base_gid = self.footIDs[any_name]
             else:
                 base_gid = self.footIDs["FL"]
-            base_params = self._build_gm_params_from_model(mjModel, base_gid)
-            params_per_foot = {name: base_params for name in self.footIDs.keys()}
+            base_params = self.get_GM_ParamsFromModel(mjModel, base_gid)
+            paramsPerFoot = {name: base_params for name in self.footIDs.keys()}
 
-        # 4) 逐脚计算
+        # compute F_GM for each foot
         forces = {}
-        for name, gid in self.footIDs.items():
-            z_signed   = float(z_dict[name])                 
-            zd_signed  = float(va_dict[name]["z_dot"])
-            zdd_signed = float(va_dict[name]["z_ddot"])
+        for name, _ in self.footIDs.items():
+            z_n =         float(z_dict[name])                 
+            z_dot_n =     float(va_dict[name]["z_dot"])
+            z_ddot_n =    float(va_dict[name]["z_ddot"])
 
-            z_pen  = max(0.0, -z_signed)
-            z_dot  = -zd_signed
-            z_ddot = -zdd_signed
-            Fn = self.compute_gm_force(
-                name, z_pen, z_dot, z_ddot,
-                params=params_per_foot[name],
-                use_ema=False,           
-                update_state=True,
-            )
-            forces[name] = Fn * n
+            if (z_n < -eps_depth) and (z_dot_n < -eps_speed):
+                # invert sign: downwards = positive
+                z =         max(0.0, -z_n)          # penetration depth
+                z_dot =     max(0.0, -z_dot_n)      # penetration velocity
+                z_ddot =    -z_ddot_n               # penetration acceleration
+
+                Fn_raw = self.compute_GM_SingleFoot(
+                    name, 
+                    z, 
+                    z_dot, 
+                    z_ddot,
+                    params=paramsPerFoot[name]
+                )
+
+                # fade-out when close to the surface
+                hasContact, dist = self.isFootFloorContact(mjData, self.footIDs[name])
+                if hasContact:
+                    s = dist / max(1e-9, delta)
+                    s = 0.0 if s < 0.0 else (1.0 if s > 1.0 else s)
+                    w_floor = s*s*(3.0 - 2.0*s)
+                else:
+                    w_floor = 1.0
+
+                Fn = max(0.0, Fn_raw) * w_floor
+
+                forces[name] = Fn * n
+            else:
+                # If foot is not penetrating, set force to zero
+                forces[name] = np.zeros(3)
 
         if monitor:
             line = ", ".join([f"{k}={np.dot(v,n):.2f}" for k,v in forces.items()])

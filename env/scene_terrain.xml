@@ -25,9 +25,9 @@
 <numeric name="gm_z0" data="0.0" />
 <numeric name="gm_phi" data="0.6" />
 <numeric name="gm_rho" data="3000.0" />
-<numeric name="gm_cg" data="1.0" />
-<numeric name="gm_cd" data="1.2" />
-<numeric name="gm_sigma_flat" data="200000.0" />
+<numeric name="gm_cg" data="2.7" />
+<numeric name="gm_cd" data="17.2" />
+<numeric name="gm_sigma_flat" data="1.0e6" />
 <numeric name="gm_eps_f" data="0.0001" />
-<numeric name="gm_sigma_cone" data="100000.0" />
+<numeric name="gm_sigma_cone" data="0.5e6" />
 </custom></mujoco>
