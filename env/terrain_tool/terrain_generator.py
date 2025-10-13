@@ -3,9 +3,11 @@ import numpy as np
 import cv2
 import noise
 
-INPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/terrain_tool/scene.xml"
-OUTPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/scene_terrain.xml"
-GO2_ROBOT_PATH = "/home/epon/SpaceDoggy/env/go2.xml"
+from terrain_para_config import terrain_dict
+
+INPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/terrain_tool/scene.xml"
+OUTPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/scene_terrain.xml"
+GO2_ROBOT_PATH = "/home/zihan/SpaceDoggy/env/go2.xml"
 
 
 # zyx euler angle to quaternion
@@ -104,6 +106,49 @@ class TerrainGenerator:
         else:
             raise ValueError("base_link body not found in robot XML.")
         base_link.tail = "\n"
+
+    def _get_or_create_custom(self):
+        custom = self.root.find("custom")
+        if custom is None:
+            custom = xml_et.SubElement(self.root, "custom")
+        return custom
+
+    def _set_numeric(self, custom_node, name: str, value):
+        """在 <custom> 下写/更新 <numeric name=... data=...>（若存在则覆盖）"""
+        node = None
+        for n in custom_node.findall("numeric"):
+            if n.get("name") == name:
+                node = n
+                break
+        if node is None:
+            node = xml_et.SubElement(custom_node, "numeric", name=name)
+        node.set("data", str(value))
+        node.tail = "\n"
+
+    def AddLunarGMParams(self, overrides: dict | None = None):
+        """
+        写入“月球近似”的 GM 参数（可用 overrides 覆盖）。
+        这些参数与 z, z_dot, z_ddot 结合即可计算 F_GM。
+        """
+        lunar_defaults = dict(
+            gm_theta=0.5236,       # θ≈30° (rad)
+            gm_nu=0.40,            # 招募率
+            gm_z0=0.0,             # 参考深度
+            gm_phi=0.60,           # 体积分数（中等致密）
+            gm_rho=3000.0,         # 颗粒密度 kg/m^3（岩屑/玻璃）
+            gm_cg=1.0,             # 附加质量系数
+            gm_cd=1.2,             # 惯性阻力缩放
+            gm_sigma_flat=2.0e5,   # 平面项等效刚度（可按沉陷调参）
+            gm_eps_f=1e-4,         # 塑性容差
+            gm_sigma_cone=1.0e5,   # 侧锥项等效刚度（可先留低一些）
+        )
+        if overrides:
+            lunar_defaults.update(overrides)
+
+        custom = self._get_or_create_custom()
+        for k, v in lunar_defaults.items():
+            self._set_numeric(custom, k, v)
+
 
     # Add Box to scene
     def AddBox(self,
@@ -262,13 +307,13 @@ class TerrainGenerator:
         # geo.attrib["solref"]   = "0.05 0.35"         # (timeconst=0.05, damping ratio=0.35)
         # geo.attrib["solimp"]   = "0.70 0.97 0.06 0.5 2.2"  # softer start, thicker cushion
 
-        geo.attrib["margin"]   = "0.03"                 # modest soft skin
-        geo.attrib["condim"]   = "3"
-        geo.attrib["friction"] = "5.0 0.5 2.0"       # more stick (slide/spin/roll)
+        # geo.attrib["margin"]   = "0.03"                 # modest soft skin
+        # geo.attrib["condim"]   = "3"
+        # geo.attrib["friction"] = "5.0 0.5 2.0"       # more stick (slide/spin/roll)
 
-        # Overdamped viscoelastic contact → sticky, little to no rebound
-        geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
-        geo.attrib["solimp"]   = "0.75 0.95 0.05 0.55 2.0"  # softer onset + thicker cushion
+        # # Overdamped viscoelastic contact → sticky, little to no rebound
+        # geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
+        # geo.attrib["solimp"]   = "0.75 0.95 0.05 0.55 2.0"  # softer onset + thicker cushion
 
     def AddHeighFieldFromImage(
             self,
@@ -282,7 +327,7 @@ class TerrainGenerator:
             image_scale=[1.0, 1.0],  # reduce image resolution
             invert_gray=False):
 
-        input_image = cv2.imread(input_img)  # 替换为你的图像文件路径
+        input_image = cv2.imread(input_img)  # change to your image path
 
         width = int(input_image.shape[1] * image_scale[0])
         height = int(input_image.shape[0] * image_scale[1])
@@ -315,18 +360,25 @@ class TerrainGenerator:
         # geo.attrib["solref"]   = "0.05 0.35"         # (timeconst=0.05, damping ratio=0.35)
         # geo.attrib["solimp"]   = "0.70 0.97 0.06 0.5 2.2"  # softer start, thicker cushion
 
-        geo.attrib["margin"]   = "0.03"                 # modest soft skin
-        geo.attrib["condim"]   = "3"
-        geo.attrib["friction"] = "5.0 0.5 2.0"       # more stick (slide/spin/roll)
+        # geo.attrib["margin"]   = "0.03"                 # modest soft skin
+        # geo.attrib["condim"]   = "3"
+        # geo.attrib["friction"] = "5.0 0.5 2.0"       # more stick (slide/spin/roll)
 
-        # Overdamped viscoelastic contact → sticky, little to no rebound
-        geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
-        geo.attrib["solimp"]   = "0.75 0.95 0.05 0.55 2.0"  # softer onset + thicker cushion
+        # # Overdamped viscoelastic contact → sticky, little to no rebound
+        # geo.attrib["solref"]   = "0.10 1.40"             # timeconst=0.08s, damping ratio>1 (overdamped)
+        # geo.attrib["solimp"]   = "0.75 0.95 0.05 0.55 2.0"  # softer onset + thicker cushion
 
     def Save(self):
         self.scene.write(OUTPUT_SCENE_PATH)
         self.robot.write(GO2_ROBOT_PATH)
 
+    def DisableFloorCollision(self):
+        """测试 GM 外力时，关闭 'floor' 的接触，避免与接触力叠加。"""
+        for g in self.worldbody.findall("geom"):
+            if g.get("name") == "floor":
+                g.set("contype", "0")
+                g.set("conaffinity", "0")
+                g.tail = "\n"
 
 if __name__ == "__main__":
     tg = TerrainGenerator()
@@ -341,6 +393,13 @@ if __name__ == "__main__":
         position=[0, 0, 0.05],
         size=[10, 10, 0.001],
         rgba=[0, 1, 0, 0.15])
+    
+    # Add lunar GM params
+    # tg.DisableFloorCollision()
+    tg.AddLunarGMParams() # use defaults
+
+    # Add terrains based on terrain_dict
+    # tg.AddLunarGMParams(overrides=terrain_dict) 
 
     # Perlin height field
     # tg.AddPerlinHeighField(position=[0.0, 0.0, 0.0], size=[10.0, 10.0])

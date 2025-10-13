@@ -109,9 +109,15 @@ def PhysicsViewerThread():
         # Monitor Foot Status: z, z_dot, z_ddot
         # 1. `monitor = False` if you felt it too verbose
         # 2. please refer to granular_module.py for the meanings of these variables
-        granular_modules.distPlane2Foot(mj_data, monitor=True)
-        granular_modules.velAccPlane2Foot(mj_model, mj_data, monitor=True)
+        # granular_modules.distPlane2Foot(mj_data, monitor=True)
+        # granular_modules.velAccPlane2Foot(mj_model, mj_data, monitor=True)
 
+        params_FL = granular_modules._build_gm_params_from_model(mj_model, foot_ids["FL"])
+        params_all = {name: params_FL for name in foot_ids.keys()}
+
+        granular_modules.compute_gm_forces_for_all_feet(
+            mj_model, mj_data, params_per_foot=params_all, use_ema=True, monitor=True
+        )
         viewer.sync()
         locker.release()
         time.sleep(config.VIEWER_DT)

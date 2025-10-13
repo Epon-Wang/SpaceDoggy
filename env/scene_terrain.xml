@@ -20,4 +20,14 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
   <geom name="ref_plane" type="plane" pos="0 0 0.05" quat="1 0 0 0" size="10 10 0.001" rgba="0 1 0 0.15" contype="0" conaffinity="0" group="1" /></worldbody>
 <option gravity="0.0 0.0 -9.81" />
-</mujoco>
+<custom><numeric name="gm_theta" data="0.5236" />
+<numeric name="gm_nu" data="0.4" />
+<numeric name="gm_z0" data="0.0" />
+<numeric name="gm_phi" data="0.6" />
+<numeric name="gm_rho" data="3000.0" />
+<numeric name="gm_cg" data="1.0" />
+<numeric name="gm_cd" data="1.2" />
+<numeric name="gm_sigma_flat" data="200000.0" />
+<numeric name="gm_eps_f" data="0.0001" />
+<numeric name="gm_sigma_cone" data="100000.0" />
+</custom></mujoco>
