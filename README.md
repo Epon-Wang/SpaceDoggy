@@ -75,11 +75,11 @@ python3 unitree_mujoco.py
 Now you can see the dog walking on the terrain. You can make the dog move faster unsing the keyboard. For the detailed operation please refer to `teleop_keyboard.py`.
 
 ### Testing Script
-First, navigate to `./env/simulate_python` to start the simulator
-```bash
-python3 unitree_mujoco.py
-```
-Then, navigate to `./script/test` and start the testing script
+First, navigate to `./script/test` and start the testing script
 ```bash
 python3 name_of_example.py
+```
+Then, navigate to `./env/simulate_python` to start the simulator
+```bash
+python3 unitree_mujoco.py
 ```
