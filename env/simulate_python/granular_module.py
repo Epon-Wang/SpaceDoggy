@@ -80,7 +80,7 @@ class GranularModules:
         plt.show()
         
 
-    def plotContactForces(
+    def plot_GM_OnFoot(
             self,
             data: dict
         ) -> None:
@@ -98,7 +98,7 @@ class GranularModules:
         tArray = np.array(data['time'])
 
         fig, axes = plt.subplots(4, 1, figsize=(12, 14))
-        fig.suptitle('Normal Contact Force (z-component) of Each Foot', fontsize=16)
+        fig.suptitle('F_GM on Each Foot', fontsize=16)
 
         colors = {
             'FL':   'red', 

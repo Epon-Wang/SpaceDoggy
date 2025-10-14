@@ -17,41 +17,42 @@ locker = threading.Lock()
 mj_model = mujoco.MjModel.from_xml_path(config.ROBOT_SCENE)
 mj_data = mujoco.MjData(mj_model)
 
-
+# Parameters
 REF_PLANE_NAME = "ref_plane"
 GND_PLANE_NAME = "floor"
 FOOT_GEOMS_NAMES = ["FL", "FR", "RL", "RR"]  # four feet geom names from go2.xml
-
-# Get geom ids for the ground
-ref_plane_id = mj_model.geom(REF_PLANE_NAME).id
-gnd_plane_id = mj_model.geom(GND_PLANE_NAME).id
-foot_ids = {name: mj_model.geom(name).id for name in FOOT_GEOMS_NAMES}
-
-print("Reference Plane ID:", ref_plane_id)
-print("Ground Plane ID:", gnd_plane_id)
-print("Foot Geom IDs:", foot_ids)
-
-granular_modules = GranularModules(
-    refPlaneID=ref_plane_id, 
-    gndPlaneID=gnd_plane_id, 
-    footIDs=foot_ids, 
-    footNames=FOOT_GEOMS_NAMES
-)
+RECORD_DURATION = 20.0  # in seconds, for data recording
 
 # Data recording setup
-RECORD_DURATION = 10.0  # seconds
-footData = {
-    'time':     [],
-    'z':        {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [distances]}
-    'z_dot':    {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [velocities]}
-    'z_ddot':   {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [accelerations]}
-    'contact_force': {name: [] for name in FOOT_GEOMS_NAMES},  # {foot_name: [force magnitudes]}
-    'contact_force_vec': {name: [] for name in FOOT_GEOMS_NAMES}  # {foot_name: [force vectors]}
-}
-rec_init_t = None
-isRecording = False
+rec_init_t =    None
+isRecording =   False
 
-# Store current contact forces (updated in SimulationThread)
+# Get geom ids for the ground
+ref_plane_id =  mj_model.geom(REF_PLANE_NAME).id
+gnd_plane_id =  mj_model.geom(GND_PLANE_NAME).id
+foot_ids =      {name: mj_model.geom(name).id for name in FOOT_GEOMS_NAMES}
+
+# Granular media module initialization
+granular_modules = GranularModules(
+    refPlaneID= ref_plane_id, 
+    gndPlaneID= gnd_plane_id, 
+    footIDs=    foot_ids, 
+    footNames=  FOOT_GEOMS_NAMES
+)
+
+# Foot Data Storage:
+#  - Distance, Velocity, Acceleration to Reference Plane
+footData = {
+    'time':                 [],
+    'z':                    {name: [] for name in FOOT_GEOMS_NAMES},            # {foot_name: [distances]}
+    'z_dot':                {name: [] for name in FOOT_GEOMS_NAMES},            # {foot_name: [velocities]}
+    'z_ddot':               {name: [] for name in FOOT_GEOMS_NAMES},            # {foot_name: [accelerations]}
+    'contact_force':        {name: [] for name in FOOT_GEOMS_NAMES},            # {foot_name: [force magnitudes]}
+    'contact_force_vec':    {name: [] for name in FOOT_GEOMS_NAMES}             # {foot_name: [force vectors]}
+}
+
+# Foot Data Storage:
+#  - F_GM normal to ground plane
 current_contact_forces = {name: np.zeros(3) for name in FOOT_GEOMS_NAMES}
 
 # Setup contact force visualization options
@@ -116,11 +117,13 @@ def SimulationThread():
             mj_model, mj_data, paramsPerFoot=params_all, monitor=True
         )
 
+        # F_GM Plotting
         mj_data.xfrc_applied[:] = 0.0
         for foot_name, gid in foot_ids.items():
             body_id = mj_model.geom_bodyid[gid]
             f_world = forces[foot_name]
             mj_data.xfrc_applied[body_id, :3] += f_world
+
             # Store current contact forces for recording
             current_contact_forces[foot_name] = f_world.copy()
         # =================================================================================
@@ -204,7 +207,7 @@ def PhysicsViewerThread():
             else:
                 isRecording = False
                 granular_modules.plotDataPlane2Foot(footData)
-                granular_modules.plotContactForces(footData)
+                granular_modules.plot_GM_OnFoot(footData)
         
         # =================================================================================
 
