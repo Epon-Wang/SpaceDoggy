@@ -44,10 +44,15 @@ footData = {
     'time':     [],
     'z':        {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [distances]}
     'z_dot':    {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [velocities]}
-    'z_ddot':   {name: [] for name in FOOT_GEOMS_NAMES}     # {foot_name: [accelerations]}
+    'z_ddot':   {name: [] for name in FOOT_GEOMS_NAMES},    # {foot_name: [accelerations]}
+    'contact_force': {name: [] for name in FOOT_GEOMS_NAMES},  # {foot_name: [force magnitudes]}
+    'contact_force_vec': {name: [] for name in FOOT_GEOMS_NAMES}  # {foot_name: [force vectors]}
 }
 rec_init_t = None
 isRecording = False
+
+# Store current contact forces (updated in SimulationThread)
+current_contact_forces = {name: np.zeros(3) for name in FOOT_GEOMS_NAMES}
 
 # Setup contact force visualization options
 vis_options = None
@@ -85,8 +90,9 @@ dim_motor_sensor_ = 3 * num_motor_
 time.sleep(0.2)
 
 
+
 def SimulationThread():
-    global mj_data, mj_model
+    global mj_data, mj_model, current_contact_forces
 
     ChannelFactoryInitialize(config.DOMAIN_ID, config.INTERFACE)
     unitree = UnitreeSdk2Bridge(mj_model, mj_data)
@@ -100,8 +106,6 @@ def SimulationThread():
         step_start = time.perf_counter()
 
         locker.acquire()
-
-
 
         # Apply granular media forces to each foot
         # =================================================================================
@@ -117,9 +121,9 @@ def SimulationThread():
             body_id = mj_model.geom_bodyid[gid]
             f_world = forces[foot_name]
             mj_data.xfrc_applied[body_id, :3] += f_world
+            # Store current contact forces for recording
+            current_contact_forces[foot_name] = f_world.copy()
         # =================================================================================
-
-
 
         if config.ENABLE_ELASTIC_BAND:
             if elastic_band.enable:
@@ -135,6 +139,7 @@ def SimulationThread():
         )
         if time_until_next_step > 0:
             time.sleep(time_until_next_step)
+
 
 
 def PhysicsViewerThread():
@@ -187,11 +192,19 @@ def PhysicsViewerThread():
                 for foot_name, velAccData in velAcc.items():
                     footData['z_dot'][foot_name].append(velAccData['z_dot'])
                     footData['z_ddot'][foot_name].append(velAccData['z_ddot'])
+                
+                # Record contact forces
+                for foot_name in FOOT_GEOMS_NAMES:
+                    force_vec = current_contact_forces[foot_name]
+                    force_mag = np.linalg.norm(force_vec)
+                    footData['contact_force'][foot_name].append(force_mag)
+                    footData['contact_force_vec'][foot_name].append(force_vec.copy())
 
             # Data Visualization
             else:
                 isRecording = False
                 granular_modules.plotDataPlane2Foot(footData)
+                granular_modules.plotContactForces(footData)
         
         # =================================================================================
 

@@ -22,46 +22,13 @@ class GranularModules:
         self.prev_time = None
     
 
-
-    def isFootFloorContact(
-            self,
-            mj_data: mujoco.MjData, 
-            foot_geom_id: int
-        ) -> tuple:
-        """
-        Input:
-            - mj_data:      mujoco.MjData object
-            - foot_geom_id: geom ID of the foot
-        Output:
-            - whether the foot is in contact with the floor
-            - minimum distance between the foot and the floor
-        Note:
-            - min_dist = infinity if no contact
-        """
-        minDist = None
-        hasContact = False
-        for k in range(mj_data.ncon):
-            con = mj_data.contact[k]
-            g1, g2 = int(con.geom1), int(con.geom2)
-            if (g1 == foot_geom_id and g2 == self.gndPlaneID) or (g1 == self.gndPlaneID and g2 == foot_geom_id):
-                hasContact = True
-                d = float(con.dist)
-                minDist = d if minDist is None else min(minDist, d)
-
-        if minDist is None:
-            minDist = float("inf")
-        
-        return hasContact, minDist
-    
-
-
     def plotDataPlane2Foot(
             self,
             data: dict
         ) -> None:
         """
         Input:
-            - data: dict containing recorded foot data
+            - data: dict containing recorded foot data of distances, velocities, accelerations
         Output:
             - saved plot in folder
         """
@@ -113,6 +80,61 @@ class GranularModules:
         plt.show()
         
 
+    def plotContactForces(
+            self,
+            data: dict
+        ) -> None:
+        """
+        Input:
+            - data: dict containing recorded foot data of contact forces
+        Output:
+            - saved plot in folder showing z-component contact forces over time (one subplot per foot)
+        """
+        
+        if not data['time']:
+            print("No data recorded to plot")
+            return
+
+        tArray = np.array(data['time'])
+
+        fig, axes = plt.subplots(4, 1, figsize=(12, 14))
+        fig.suptitle('Normal Contact Force (z-component) of Each Foot', fontsize=16)
+
+        colors = {
+            'FL':   'red', 
+            'FR':   'blue', 
+            'RL':   'green', 
+            'RR':   'orange'
+        }
+
+        footFullName = {
+            'FL': 'Front Left', 
+            'FR': 'Front Right', 
+            'RL': 'Rear Left', 
+            'RR': 'Rear Right'
+        }
+
+        # Create a subplot for each foot's Fz component
+        for idx, foot in enumerate(self.footNames):
+            if foot in data['contact_force_vec']:
+                forceVec = np.array(data['contact_force_vec'][foot])
+                fz = forceVec[:, 2]
+                
+                axes[idx].plot(tArray, fz, color=colors[foot], linewidth=2, label=f'{foot} ({footFullName[foot]})')
+                axes[idx].set_title(f'{foot} - {footFullName[foot]}', fontsize=12, fontweight='bold')
+                axes[idx].set_ylabel('Fz (N)', fontsize=11)
+                axes[idx].legend(loc='upper right')
+                axes[idx].grid(True, alpha=0.3)
+                
+                # Add zero reference line
+                axes[idx].axhline(y=0, color='gray', linestyle='--', linewidth=0.8, alpha=0.5)
+        
+        axes[-1].set_xlabel('Time (s)', fontsize=11)
+        
+        plt.tight_layout()
+        plt.savefig('foot_contact_forces.png', dpi=300, bbox_inches='tight')
+        plt.show()
+    
 
     def planeCenterNormal(
             self,
@@ -124,6 +146,7 @@ class GranularModules:
         Output:
             - normal vector & center of the plane
         """
+
         # Rotation Matrix of the reference plane
         R = np.array(mjData.geom_xmat[self.refPlaneID]).reshape(3, 3)
 
@@ -136,6 +159,37 @@ class GranularModules:
         return n, p0
     
 
+    def isFootFloorContact(
+            self,
+            mj_data: mujoco.MjData, 
+            footID: int
+        ) -> tuple:
+        """
+        Input:
+            - mj_data:      mujoco.MjData object
+            - foot_geom_id: geom ID of the foot
+        Output:
+            - whether the foot is in contact with the floor
+            - minimum distance between the foot and the floor
+        Note:
+            - min_dist = infinity if no contact
+        """
+
+        minDist = None
+        hasContact = False
+        for k in range(mj_data.ncon):
+            con = mj_data.contact[k]
+            g1, g2 = int(con.geom1), int(con.geom2)
+            if (g1 == footID and g2 == self.gndPlaneID) or (g1 == self.gndPlaneID and g2 == footID):
+                hasContact = True
+                d = float(con.dist)
+                minDist = d if minDist is None else min(minDist, d)
+
+        if minDist is None:
+            minDist = float("inf")
+        
+        return hasContact, minDist
+    
 
     def distPlane2Foot(
             self,
@@ -169,7 +223,6 @@ class GranularModules:
         
         return distances
     
-
 
     def velAccPlane2Foot(
             self,
@@ -228,7 +281,6 @@ class GranularModules:
         return velAcc
     
 
-
     def modelNumericReader(
             self, 
             mjModel:    mujoco.MjModel, 
@@ -257,7 +309,6 @@ class GranularModules:
             raise ValueError(f"<numeric name='{name}'> must be scalar, got size={sz}.")
         
         return float(mjModel.numeric_data[adr])
-
 
 
     def get_GM_ParamsFromModel(
@@ -305,10 +356,8 @@ class GranularModules:
         )
 
 
-
     def compute_GM_SingleFoot(
             self,
-            footName:   str,
             z:          float,
             z_dot:      float,
             z_ddot:     float,
@@ -316,7 +365,6 @@ class GranularModules:
         ) -> float:
         """
         Input:
-            - footName:     name of the foot
             - z:            penetration depth (>=0)
             - z_dot:        penetration velocity (>=0)
             - z_ddot:       penetration acceleration
@@ -324,13 +372,6 @@ class GranularModules:
         Output:
             - F_GM force of one single foot
         """
-
-        if not hasattr(self, "gm_state"):
-            self.gm_state = {
-                name: {"z_max": -1e9, "F_ema": 0.0, "tau_r": 0.0}
-                for name in self.footIDs.keys()
-            }
-        st = self.gm_state[footName]
 
         # parameters
         A =     float(params["A"])
@@ -375,7 +416,6 @@ class GranularModules:
         F_out = max(0.0, F_out_raw if z > 0.0 else 0.0)
 
         return F_out
-
 
 
     def compute_GM_AllFoot(
@@ -433,7 +473,6 @@ class GranularModules:
                 z_ddot =    -z_ddot_n               # penetration acceleration
 
                 Fn_raw = self.compute_GM_SingleFoot(
-                    name, 
                     z, 
                     z_dot, 
                     z_ddot,
