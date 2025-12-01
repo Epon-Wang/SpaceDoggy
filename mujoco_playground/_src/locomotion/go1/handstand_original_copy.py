@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Zero Gravity Reorientation task for Go1."""
+"""Handstand task for Go1."""
 
 from typing import Any, Dict, Optional, Union
 
@@ -52,7 +52,9 @@ def default_config() -> config_dict.ConfigDict:
       ),
       reward_config=config_dict.create(
           scales=config_dict.create(
+              height=1.0,
               orientation=1.0,
+              contact=-0.1,
               action_rate=0.0,
               termination=0.0,
               dof_pos_limits=-0.5,
@@ -75,34 +77,24 @@ class Handstand(go1_base.Go1Env):
 
   def __init__(
       self,
-      config:           config_dict.ConfigDict = default_config(),
+      config: config_dict.ConfigDict = default_config(),
       config_overrides: Optional[Dict[str, Union[str, int, list[Any]]]] = None,
-      ) -> None:
-    
+  ):
     super().__init__(
         xml_path=consts.FULL_FLAT_TERRAIN_XML.as_posix(),
         config=config,
         config_overrides=config_overrides,
     )
-    
-    # NOTE: Zero Gravity
-    self._mj_model.opt.gravity[:] = [0.0, 0.0, 0.0]
-    self._mjx_model = mjx.put_model(self._mj_model, impl=self._config.impl)
-    
     self._post_init()
 
-
-
-  def _post_init(
-      self
-      ) -> None:
-    
+  def _post_init(self) -> None:
     self._init_q = jp.array(self._mj_model.keyframe("home").qpos)
+    self._handstand_q = jp.array(self._mj_model.keyframe("handstand").qpos)
     self._crouch_q = jp.array(self._mj_model.keyframe("pre_recovery").qpos)
     self._default_pose = jp.array(self._mj_model.keyframe("home").qpos[7:])
-
-
-
+    self._handstand_pose = jp.array(
+        self._mj_model.keyframe("handstand").qpos[7:]
+    )
 
     self._lowers, self._uppers = self.mj_model.jnt_range[1:].T
     c = (self._lowers + self._uppers) / 2
@@ -119,9 +111,9 @@ class Handstand(go1_base.Go1Env):
         [self._mj_model.geom(name).id for name in consts.FEET_GEOMS]
     )
     self._z_des = 0.55
-    self._desired_up_vec = jp.array([0, 0, 1])
+    self._desired_forward_vec = jp.array([0, 0, -1])
 
-    self._joint_ids = jp.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    self._joint_ids = jp.array([6, 7, 8, 9, 10, 11])
     self._joint_pose = self._default_pose[self._joint_ids]
 
     geom_names = [
@@ -137,22 +129,14 @@ class Handstand(go1_base.Go1Env):
         "fr_thigh3",
         "fl_hip",
         "fr_hip",
-        "rl_calf1",
-        "rl_calf2",
-        "rr_calf1",
-        "rr_calf2",
-        "rl_thigh1",
-        "rl_thigh2",
-        "rl_thigh3",
-        "rr_thigh1",
-        "rr_thigh2",
-        "rr_thigh3",
-        "rl_hip",
-        "rr_hip",
     ]
-
     self._unwanted_contact_geom_ids = np.array(
         [self._mj_model.geom(name).id for name in geom_names]
+    )
+
+    feet_geom_names = ["RR", "RL"]
+    self._feet_geom_ids = np.array(
+        [self._mj_model.geom(name).id for name in feet_geom_names]
     )
 
     # Contact sensor ids.
@@ -161,68 +145,33 @@ class Handstand(go1_base.Go1Env):
         for geom in geom_names
     ]
 
+  def reset(self, rng: jax.Array) -> mjx_env.State:
+    rng, reset_rng = jax.random.split(rng)
 
+    init_from_crouch = jax.random.bernoulli(
+        reset_rng, self._config.init_from_crouch
+    )
 
-  def _domain_randomize(
-      self,
-      rng: jax.Array
-      ) -> None:
-    
-    # Quadruped Spawn Pose
-    # - init from CROUCH or STANDING
-    rng, key = jax.random.split(rng)
-    if_init_from_crouch = jax.random.bernoulli(key, self._config.init_from_crouch)
-    qpos = jp.where(if_init_from_crouch, self._crouch_q, self._init_q)
+    qpos = jp.where(init_from_crouch, self._crouch_q, self._init_q)
 
-    # Quadruped Spawn Position
-    # - x   +=U(-0.5, 0.5)
-    # - y   +=U(-0.5, 0.5)
-    # - z   +=U( 1.0, 1.5)
+    # x=+U(-0.5, 0.5), y=+U(-0.5, 0.5), yaw=U(-3.14, 3.14).
     rng, key = jax.random.split(rng)
     dxy = jax.random.uniform(key, (2,), minval=-0.5, maxval=0.5)
     qpos = qpos.at[0:2].set(qpos[0:2] + dxy)
     rng, key = jax.random.split(rng)
-    dz = jax.random.uniform(key, minval=1.0, maxval=1.5)
-    qpos = qpos.at[2].set(qpos[2] + dz)
-
-    # Quadruped Spawn Orientation
-    # - roll    = U(-3.14, 3.14)
-    # - pitch   = U(-3.14, 3.14)
-    # - yaw     = U(-3.14, 3.14)
-    rng, key = jax.random.split(rng)
-    rpy = jax.random.uniform(key, (3,), minval=-3.14, maxval=3.14)
-    quat_roll =     math.axis_angle_to_quat(jp.array([1, 0, 0]), rpy[0])
-    quat_pitch =    math.axis_angle_to_quat(jp.array([0, 1, 0]), rpy[1])
-    quat_yaw =      math.axis_angle_to_quat(jp.array([0, 0, 1]), rpy[2])
-    quat =      math.quat_mul(quat_yaw, math.quat_mul(quat_pitch, quat_roll))
-    new_quat =  math.quat_mul(qpos[3:7], quat)
+    yaw = jax.random.uniform(key, (1,), minval=-3.14, maxval=3.14)
+    quat = math.axis_angle_to_quat(jp.array([0, 0, 1]), yaw)
+    new_quat = math.quat_mul(qpos[3:7], quat)
     qpos = qpos.at[3:7].set(new_quat)
 
-    # Quadruped Spawn Velocity
-    # dx        = U(-0.5, 0.5)
-    # dy        = U(-0.5, 0.5)
-    # dz        = U(-0.5, 0.5)
-    # droll     = U(-0.5, 0.5)
-    # dpitch    = U(-0.5, 0.5)
-    # dyaw      = U(-0.5, 0.5)
+    # d(xyzrpy)=U(-0.5, 0.5)
     qvel_nonzero = jp.zeros(self.mjx_model.nv)
     rng, key = jax.random.split(rng)
-    qvel_nonzero = qvel_nonzero.at[0:6].set(jax.random.uniform(key, (6,), minval=-0.5, maxval=0.5))
-    qvel = jp.where(if_init_from_crouch, jp.zeros(self.mjx_model.nv), qvel_nonzero)
+    qvel_nonzero = qvel_nonzero.at[0:6].set(
+        jax.random.uniform(key, (6,), minval=-0.5, maxval=0.5)
+    )
+    qvel = jp.where(init_from_crouch, jp.zeros(self.mjx_model.nv), qvel_nonzero)
 
-    return rng, qpos, qvel
-
-
-
-  def reset(
-      self,
-      rng: jax.Array
-      ) -> mjx_env.State:
-
-    # Domain Randomization
-    rng, qpos, qvel = self._domain_randomize(rng)
-
-    # State - Data
     data = mjx_env.make_data(
         self.mj_model,
         qpos=qpos,
@@ -234,98 +183,64 @@ class Handstand(go1_base.Go1Env):
     )
     data = mjx.forward(self.mjx_model, data)
 
-    # State - Info
     info = {
         "step": 0,
         "rng": rng,
         "last_act": jp.zeros(self.mjx_model.nu),
     }
-
-    # State - Metrics
     metrics = {}
     for k in self._config.reward_config.scales.keys():
-        metrics[f"reward/{k}"] = jp.zeros(())
+      metrics[f"reward/{k}"] = jp.zeros(())
 
-    # State - Observation
     contact = jp.array([
         data.sensordata[self._mj_model.sensor_adr[sensorid]] > 0
         for sensorid in self._fullcollision_floor_found_sensor
     ])
     obs = self._get_obs(data, info, contact)
-
-    # State - Reward & Termination
     reward, done = jp.zeros(2)
-
     return mjx_env.State(data, obs, reward, done, metrics, info)
-  
 
-
-  def step(
-      self,
-      state:    mjx_env.State,
-      action:   jax.Array
-      ) -> mjx_env.State:
-    
+  def step(self, state: mjx_env.State, action: jax.Array) -> mjx_env.State:
     motor_targets = state.data.ctrl + action * self._config.action_scale
-
-    # State - Data
-    data = mjx_env.step(self.mjx_model, state.data, motor_targets, self.n_substeps)
+    data = mjx_env.step(
+        self.mjx_model, state.data, motor_targets, self.n_substeps
+    )
 
     contact = jp.array([
         data.sensordata[self._mj_model.sensor_adr[sensorid]] > 0
         for sensorid in self._fullcollision_floor_found_sensor
     ])
-
-    # State - Observation
     obs = self._get_obs(data, state.info, contact)
-
-    # State - Termination
     done = self._get_termination(data, state.info, contact)
 
-    # State - Reward
     rewards = self._get_reward(data, action, state.info, done)
     rewards = {
         k: v * self._config.reward_config.scales[k] for k, v in rewards.items()
     }
     reward = jp.clip(sum(rewards.values()) * self.dt, 0.0, 10000.0)
 
-    # State - Info & Metrics
     state.info["step"] += 1
     state.info["last_act"] = action
     for k, v in rewards.items():
       state.metrics[f"reward/{k}"] = v
 
     done = done.astype(reward.dtype)
-
     state = state.replace(data=data, obs=obs, reward=reward, done=done)
-
     return state
 
-
-
   def _get_termination(
-      self,
-      data:     mjx.Data,
-      info:     dict[str, Any],
-      contact:  jax.Array
-      ) -> jax.Array:
-    
+      self, data: mjx.Data, info: dict[str, Any], contact: jax.Array
+  ) -> jax.Array:
     del info  # Unused.
-    # fall_termination = self.get_upvector(data)[-1] < -0.25
+    fall_termination = self.get_upvector(data)[-1] < -0.25
     contact_termination = jp.any(contact)
     energy = jp.sum(jp.abs(data.actuator_force) * jp.abs(data.qvel[6:]))
     energy_termination = energy > self._config.energy_termination_threshold
-    return contact_termination | energy_termination
-
-
+    return fall_termination | contact_termination | energy_termination
 
   def _get_obs(
-      self,
-      data:     mjx.Data,
-      info:     dict[str, Any],
-      contact:  jax.Array
+      self, data: mjx.Data, info: dict[str, Any], contact: jax.Array
   ) -> Dict[str, jax.Array]:
-    
     del contact  # Unused.
 
     gyro = self.get_gyro(data)
@@ -404,40 +319,34 @@ class Handstand(go1_base.Go1Env):
         "privileged_state": privileged_state,
     }
 
-
-
   def _get_reward(
       self,
-      data:     mjx.Data,
-      action:   jax.Array,
-      info:     dict[str, Any],
-      done:     jax.Array,
-      ) -> dict[str, jax.Array]:
-    
-    # up_vector = data.site_xmat[self._imu_site_id] @ jp.array([0.0, 0.0, 1.0])
-    up_vector = self.get_upvector(data)
-    
+      data: mjx.Data,
+      action: jax.Array,
+      info: dict[str, Any],
+      done: jax.Array,
+  ) -> dict[str, jax.Array]:
+    forward = data.site_xmat[self._imu_site_id] @ jp.array([1.0, 0.0, 0.0])
     joint_torques = data.actuator_force
-
-    rewards = {
-        "orientation":      self._reward_orientation(up_vector, self._desired_up_vec),
-        "action_rate":      self._cost_action_rate(action, info),
-        "torques":          self._cost_torques(joint_torques),
-        "termination":      done,
-        "dof_pos_limits":   self._cost_joint_pos_limits(data.qpos[7:]),
-        "dof_acc":          self._cost_dof_acc(data.qacc[6:]),
-        "pose":             self._cost_pose(data.qpos[7:]),
-        "stay_still":       self._cost_stay_still(data.qvel[:6]),
-        "energy":           self._cost_energy(data.qvel[6:], data.actuator_force),
+    torso_height = data.site_xpos[self._imu_site_id][2]
+    return {
+        "height": self._reward_height(torso_height),
+        "orientation": self._reward_orientation(
+            forward, self._desired_forward_vec
+        ),
+        "contact": self._cost_contact(data),
+        "action_rate": self._cost_action_rate(action, info),
+        "torques": self._cost_torques(joint_torques),
+        "termination": done,
+        "dof_pos_limits": self._cost_joint_pos_limits(data.qpos[7:]),
+        "dof_acc": self._cost_dof_acc(data.qacc[6:]),
+        "pose": self._cost_pose(data.qpos[7:]),
+        "stay_still": self._cost_stay_still(data.qvel[:6]),
+        "energy": self._cost_energy(data.qvel[6:], data.actuator_force),
     }
 
-    return rewards
-
-
-
-  # Task-Specific Rewards
   def _cost_stay_still(self, qvel: jax.Array) -> jax.Array:
-    return jp.sum(jp.square(qvel[:3])) + jp.square(qvel[5])
+    return jp.sum(jp.square(qvel[:2])) + jp.square(qvel[5])
 
   def _reward_orientation(
       self, forward_vec: jax.Array, up_vec: jax.Array
@@ -446,12 +355,21 @@ class Handstand(go1_base.Go1Env):
     normalized = 0.5 * cos_dist + 0.5
     return jp.square(normalized)
 
+  def _reward_height(self, torso_height: jax.Array) -> jax.Array:
+    height = jp.min(jp.array([torso_height, self._z_des]))
+    error = self._z_des - height
+    return jp.exp(-error / 1.0)
+
+  def _cost_contact(self, data: mjx.Data) -> jax.Array:
+    feet_contact = jp.array([
+        data.sensordata[self._mj_model.sensor_adr[sensorid]] > 0
+        for sensorid in self._feet_floor_found_sensor
+    ])
+    return jp.any(feet_contact)
+
   def _cost_pose(self, qpos: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qpos[self._joint_ids] - self._joint_pose))
 
-
-
-  # General Rewards
   def _cost_torques(self, torques: jax.Array) -> jax.Array:
     return jp.sum(jp.square(torques))
 
@@ -472,3 +390,42 @@ class Handstand(go1_base.Go1Env):
 
   def _cost_dof_acc(self, qacc: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qacc))
+
+
+class Footstand(Handstand):
+  """Footstand task for Go1."""
+
+  def _post_init(self) -> None:
+    super()._post_init()
+
+    self._handstand_pose = jp.array(
+        self._mj_model.keyframe("footstand").qpos[7:]
+    )
+    self._handstand_q = jp.array(self._mj_model.keyframe("footstand").qpos)
+    self._joint_ids = jp.array([0, 1, 2, 3, 4, 5])
+    self._joint_pose = self._default_pose[self._joint_ids]
+    self._desired_forward_vec = jp.array([0, 0, 1])
+    self._z_des = 0.53
+
+    geom_names = [
+        "rl_calf1",
+        "rl_calf2",
+        "rr_calf1",
+        "rr_calf2",
+        "rl_thigh1",
+        "rl_thigh2",
+        "rl_thigh3",
+        "rr_thigh1",
+        "rr_thigh2",
+        "rr_thigh3",
+        "rl_hip",
+        "rr_hip",
+    ]
+    self._unwanted_contact_geom_ids = np.array(
+        [self._mj_model.geom(name).id for name in geom_names]
+    )
+
+    feet_geom_names = ["FR", "FL"]
+    self._feet_geom_ids = np.array(
+        [self._mj_model.geom(name).id for name in feet_geom_names]
+    )
