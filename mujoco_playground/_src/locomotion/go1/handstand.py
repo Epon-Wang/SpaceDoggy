@@ -472,3 +472,43 @@ class Handstand(go1_base.Go1Env):
 
   def _cost_dof_acc(self, qacc: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qacc))
+
+
+
+class Footstand(Handstand):
+  """Footstand task for Go1."""
+
+  def _post_init(self) -> None:
+    super()._post_init()
+
+    self._handstand_pose = jp.array(
+        self._mj_model.keyframe("footstand").qpos[7:]
+    )
+    self._handstand_q = jp.array(self._mj_model.keyframe("footstand").qpos)
+    self._joint_ids = jp.array([0, 1, 2, 3, 4, 5])
+    self._joint_pose = self._default_pose[self._joint_ids]
+    self._desired_forward_vec = jp.array([0, 0, 1])
+    self._z_des = 0.53
+
+    geom_names = [
+        "rl_calf1",
+        "rl_calf2",
+        "rr_calf1",
+        "rr_calf2",
+        "rl_thigh1",
+        "rl_thigh2",
+        "rl_thigh3",
+        "rr_thigh1",
+        "rr_thigh2",
+        "rr_thigh3",
+        "rl_hip",
+        "rr_hip",
+    ]
+    self._unwanted_contact_geom_ids = np.array(
+        [self._mj_model.geom(name).id for name in geom_names]
+    )
+
+    feet_geom_names = ["FR", "FL"]
+    self._feet_geom_ids = np.array(
+        [self._mj_model.geom(name).id for name in feet_geom_names]
+    )
