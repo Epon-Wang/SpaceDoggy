@@ -144,6 +144,21 @@ _DETERMINISTIC_RSCOPE = flags.DEFINE_boolean(
     True,
     "Run deterministic rollouts for the rscope viewer",
 )
+_VIDEO_WIDTH = flags.DEFINE_integer(
+    "video_width",
+    640,
+    "Width of the rendered video in pixels",
+)
+_VIDEO_HEIGHT = flags.DEFINE_integer(
+    "video_height",
+    480,
+    "Height of the rendered video in pixels",
+)
+_CAMERA = flags.DEFINE_string(
+    "camera",
+    None,
+    "Camera name for rendering (e.g., 'top', 'side', 'front'). Use None for default tracking camera.",
+)
 _RUN_EVALS = flags.DEFINE_boolean(
     "run_evals",
     True,
@@ -501,6 +516,7 @@ def main(argv):
   render_every = 2
   fps = 1.0 / eval_env.dt / render_every
   print(f"FPS for rendering: {fps}")
+  print(f"Video resolution: {_VIDEO_WIDTH.value}x{_VIDEO_HEIGHT.value}")
   scene_option = mujoco.MjvOption()
   scene_option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = False
   scene_option.flags[mujoco.mjtVisFlag.mjVIS_PERTFORCE] = False
@@ -508,7 +524,11 @@ def main(argv):
   for i, rollout in enumerate(trajectories):
     traj = rollout[::render_every]
     frames = eval_env.render(
-        traj, height=480, width=640, scene_option=scene_option
+        traj, 
+        height=_VIDEO_HEIGHT.value, 
+        width=_VIDEO_WIDTH.value, 
+        camera=_CAMERA.value,
+        scene_option=scene_option
     )
     media.write_video(f"rollout{i}.mp4", frames, fps=fps)
     print(f"Rollout video saved as 'rollout{i}.mp4'.")

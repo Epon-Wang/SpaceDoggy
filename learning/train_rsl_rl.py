@@ -81,6 +81,16 @@ _MULTI_GPU = flags.DEFINE_boolean(
 _CAMERA = flags.DEFINE_string(
     "camera", None, "Camera name to use for rendering."
 )
+_VIDEO_WIDTH = flags.DEFINE_integer(
+    "video_width",
+    640,
+    "Width of the rendered video in pixels",
+)
+_VIDEO_HEIGHT = flags.DEFINE_integer(
+    "video_height",
+    480,
+    "Height of the rendered video in pixels",
+)
 _WP_KERNEL_CACHE_DIR = flags.DEFINE_string(
     "wp_kernel_cache_dir",
     "/tmp/wp_kernel_cache_playground",
@@ -259,11 +269,12 @@ def main(argv):
   base_env = eval_env  # or brax_env.env.env.env
   fps = 1.0 / base_env.dt / render_every
   traj = rollout[::render_every]
+  print(f"Video resolution: {_VIDEO_WIDTH.value}x{_VIDEO_HEIGHT.value}")
   frames = eval_env.render(
       traj,
       camera=_CAMERA.value,
-      height=480,
-      width=640,
+      height=_VIDEO_HEIGHT.value,
+      width=_VIDEO_WIDTH.value,
       scene_option=scene_option,
   )
   media.write_video("rollout.mp4", frames, fps=fps)

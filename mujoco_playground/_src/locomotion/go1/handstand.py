@@ -50,18 +50,21 @@ def default_config() -> config_dict.ConfigDict:
               linvel=0.1,
           ),
       ),
+      # Reward Configuration Scales - Based on paper values
+      # Paper: (c1,c2,c3,c4,c5,c6) = (0.15,-0.06,-0.01,-1,-4e-6,-0.01)
+      # c1=orientation, c2=action_rate, c3=torques, c4=dof_limits, c5=dof_acc
       reward_config=config_dict.create(
           scales=config_dict.create(
-              orientation=1.0,
-              action_rate=0.0,
-              termination=0.0,
-              dof_pos_limits=-0.5,
-              torques=0.0,
+              orientation=0.15,         
+              action_rate=-0.1,        
+              termination=-1.0,         # negative reward for unsuccessful termination
+              termination_good=5.0,     # positive reward for successful termination
+              dof_pos_limits=-1.0,      
+              torques=-0.01,            
               pose=-0.1,
               stay_still=0.0,
-              # For finetuning, use energy=-0.003 and dof_acc=-2.5e-7.
               energy=0.0,
-              dof_acc=0.0,
+              dof_acc=-4e-6,            
           ),
       ),
       impl="jax",
@@ -100,9 +103,6 @@ class Handstand(go1_base.Go1Env):
     self._init_q = jp.array(self._mj_model.keyframe("home").qpos)
     self._crouch_q = jp.array(self._mj_model.keyframe("pre_recovery").qpos)
     self._default_pose = jp.array(self._mj_model.keyframe("home").qpos[7:])
-
-
-
 
     self._lowers, self._uppers = self.mj_model.jnt_range[1:].T
     c = (self._lowers + self._uppers) / 2
@@ -281,9 +281,10 @@ class Handstand(go1_base.Go1Env):
 
     # State - Termination
     done = self._get_termination(data, state.info, contact)
+    done_good = self.get_termination_good(data, state.info, contact)
 
     # State - Reward
-    rewards = self._get_reward(data, action, state.info, done)
+    rewards = self._get_reward(data, action, state.info, done, done_good)
     rewards = {
         k: v * self._config.reward_config.scales[k] for k, v in rewards.items()
     }
@@ -295,8 +296,8 @@ class Handstand(go1_base.Go1Env):
     for k, v in rewards.items():
       state.metrics[f"reward/{k}"] = v
 
-    done = done.astype(reward.dtype)
-
+    # Terminate on both bad and good terminations
+    done = (done | done_good).astype(reward.dtype)
     state = state.replace(data=data, obs=obs, reward=reward, done=done)
 
     return state
@@ -315,9 +316,18 @@ class Handstand(go1_base.Go1Env):
     contact_termination = jp.any(contact)
     energy = jp.sum(jp.abs(data.actuator_force) * jp.abs(data.qvel[6:]))
     energy_termination = energy > self._config.energy_termination_threshold
-    return contact_termination | energy_termination
+    return contact_termination | energy_termination 
 
-
+  def get_termination_good(
+      self,
+      data:     mjx.Data,
+      info:     dict[str, Any],
+      contact:  jax.Array
+      ) -> jax.Array:
+    up_vector = self.get_upvector(data)
+    desired_vector = jp.array([0, 0, 1])
+    orientation_good = jp.dot(up_vector, desired_vector) > 0.95
+    return orientation_good & (~self._get_termination(data, info, contact))
 
   def _get_obs(
       self,
@@ -412,6 +422,7 @@ class Handstand(go1_base.Go1Env):
       action:   jax.Array,
       info:     dict[str, Any],
       done:     jax.Array,
+      done_good: jax.Array,
       ) -> dict[str, jax.Array]:
     
     # up_vector = data.site_xmat[self._imu_site_id] @ jp.array([0.0, 0.0, 1.0])
@@ -419,11 +430,17 @@ class Handstand(go1_base.Go1Env):
     
     joint_torques = data.actuator_force
 
+    # done_good: give positive reward for successful termination
+    # done & ~done_good: give negative reward for unsuccessful termination (collision or excessive energy)
+    done_bad = (done & (~done_good)).astype(jp.float32)
+    done_good_float = done_good.astype(jp.float32)
+
     rewards = {
         "orientation":      self._reward_orientation(up_vector, self._desired_up_vec),
         "action_rate":      self._cost_action_rate(action, info),
         "torques":          self._cost_torques(joint_torques),
-        "termination":      done,
+        "termination":      done_bad,  # fail (negative reward)
+        "termination_good": done_good_float,  # success (positive reward)
         "dof_pos_limits":   self._cost_joint_pos_limits(data.qpos[7:]),
         "dof_acc":          self._cost_dof_acc(data.qacc[6:]),
         "pose":             self._cost_pose(data.qpos[7:]),

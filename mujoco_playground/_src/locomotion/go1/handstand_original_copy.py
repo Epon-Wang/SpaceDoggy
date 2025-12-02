@@ -71,7 +71,6 @@ def default_config() -> config_dict.ConfigDict:
       njmax=200,
   )
 
-
 class Handstand(go1_base.Go1Env):
   """Handstand task for Go1."""
 
