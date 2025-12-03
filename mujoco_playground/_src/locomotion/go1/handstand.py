@@ -40,6 +40,7 @@ def default_config() -> config_dict.ConfigDict:
       soft_joint_pos_limit_factor=0.9,
       init_from_crouch=0.0,
       energy_termination_threshold=np.inf,
+      timeout_steps=3000,  # 60 seconds: 60 / 0.02 = 3000 steps  
       noise_config=config_dict.create(
           level=1.0,  # Set to 0.0 to disable noise.
           scales=config_dict.create(
@@ -50,21 +51,18 @@ def default_config() -> config_dict.ConfigDict:
               linvel=0.1,
           ),
       ),
-      # Reward Configuration Scales - Based on paper values
-      # Paper: (c1,c2,c3,c4,c5,c6) = (0.15,-0.06,-0.01,-1,-4e-6,-0.01)
-      # c1=orientation, c2=action_rate, c3=torques, c4=dof_limits, c5=dof_acc
+      # Reward Configuration Scales
       reward_config=config_dict.create(
           scales=config_dict.create(
-              orientation=1.0,         
-              action_rate=-0.05,        
+              orientation=2.0,         
+              action_rate=0.0,        
               termination=-1.0,         # negative reward for unsuccessful termination
-              termination_good=50.0,     # positive reward for successful termination
               dof_pos_limits=-1.0,      
-              torques=-0.001,            
-              pose=-0.1,
-              stay_still=0.0,
+              torques=0.0,            
+              pose=0.0,
+              stay_still=-0.01,          # penalize linear and angular velocity
               energy=0.0,
-              dof_acc=-4e-6,            
+              dof_acc=0.0,            
           ),
       ),
       impl="jax",
@@ -74,7 +72,7 @@ def default_config() -> config_dict.ConfigDict:
 
 
 class Handstand(go1_base.Go1Env):
-  """Handstand task for Go1."""
+  """Landing task for Go1."""
 
   def __init__(
       self,
@@ -280,11 +278,11 @@ class Handstand(go1_base.Go1Env):
     obs = self._get_obs(data, state.info, contact)
 
     # State - Termination
-    done = self._get_termination(data, state.info, contact)
-    done_good = self.get_termination_good(data, state.info, contact)
+    terminate = self._get_termination(data, state.info, contact)
+    terminate_timeout = self._get_termination_timeout(state.info)
 
     # State - Reward
-    rewards = self._get_reward(data, action, state.info, done, done_good)
+    rewards = self._get_reward(data, action, state.info, terminate, terminate_timeout)
     rewards = {
         k: v * self._config.reward_config.scales[k] for k, v in rewards.items()
     }
@@ -297,37 +295,32 @@ class Handstand(go1_base.Go1Env):
       state.metrics[f"reward/{k}"] = v
 
     # Terminate on both bad and good terminations
-    done = (done | done_good).astype(reward.dtype)
+    done = (terminate | terminate_timeout).astype(reward.dtype)
     state = state.replace(data=data, obs=obs, reward=reward, done=done)
 
     return state
 
 
 
+  # Terminations
   def _get_termination(
       self,
       data:     mjx.Data,
       info:     dict[str, Any],
       contact:  jax.Array
       ) -> jax.Array:
-    
     del info  # Unused.
     # fall_termination = self.get_upvector(data)[-1] < -0.25
     contact_termination = jp.any(contact)
     energy = jp.sum(jp.abs(data.actuator_force) * jp.abs(data.qvel[6:]))
     energy_termination = energy > self._config.energy_termination_threshold
-    return contact_termination | energy_termination 
-
-  def get_termination_good(
+    return contact_termination | energy_termination
+  
+  def _get_termination_timeout(
       self,
-      data:     mjx.Data,
       info:     dict[str, Any],
-      contact:  jax.Array
-      ) -> jax.Array:
-    up_vector = self.get_upvector(data)
-    desired_vector = jp.array([0, 0, 1])
-    orientation_good = jp.dot(up_vector, desired_vector) > 0.98
-    return orientation_good
+    ) -> jax.Array:
+    return info["step"] >= self._config.timeout_steps
 
   def _get_obs(
       self,
@@ -421,31 +414,29 @@ class Handstand(go1_base.Go1Env):
       data:     mjx.Data,
       action:   jax.Array,
       info:     dict[str, Any],
-      done:     jax.Array,
-      done_good: jax.Array,
+      terminate:     jax.Array,
+      terminate_timeout: jax.Array,
       ) -> dict[str, jax.Array]:
     
-    # up_vector = data.site_xmat[self._imu_site_id] @ jp.array([0.0, 0.0, 1.0])
-    up_vector = self.get_upvector(data)
+    up_vector = data.site_xmat[self._imu_site_id] @ jp.array([0.0, 0.0, 1.0])
+    # up_vector = self.get_upvector(data)
     
     joint_torques = data.actuator_force
-
-    # done_good: give positive reward for successful termination
-    # done & ~done_good: give negative reward for unsuccessful termination (collision or excessive energy)
-    done_bad = (done & (~done_good)).astype(jp.float32)
-    done_good_float = done_good.astype(jp.float32)
+    
+    done_bad = (terminate & (~terminate_timeout)).astype(jp.float32)
+    done_timeout = (terminate_timeout).astype(jp.float32)
+    
 
     rewards = {
-        "orientation":      self._reward_orientation(up_vector, self._desired_up_vec),
-        "action_rate":      self._cost_action_rate(action, info),
-        "torques":          self._cost_torques(joint_torques),
-        "termination":      done_bad,  # fail (negative reward)
-        "termination_good": done_good_float,  # success (positive reward)
-        "dof_pos_limits":   self._cost_joint_pos_limits(data.qpos[7:]),
-        "dof_acc":          self._cost_dof_acc(data.qacc[6:]),
-        "pose":             self._cost_pose(data.qpos[7:]),
-        "stay_still":       self._cost_stay_still(data.qvel[:6]),
-        "energy":           self._cost_energy(data.qvel[6:], data.actuator_force),
+        "orientation":          self._reward_orientation(up_vector, self._desired_up_vec),
+        "action_rate":          self._cost_action_rate(action, info),
+        "torques":              self._cost_torques(joint_torques),
+        "termination":          done_bad,  # collision/energy fail (negative reward)
+        "dof_pos_limits":       self._cost_joint_pos_limits(data.qpos[7:]),
+        "dof_acc":              self._cost_dof_acc(data.qacc[6:]),
+        "pose":                 self._cost_pose(data.qpos[7:]),
+        "stay_still":           self._cost_stay_still(data.qvel[:6]),
+        "energy":               self._cost_energy(data.qvel[6:], data.actuator_force),
     }
 
     return rewards
@@ -454,12 +445,12 @@ class Handstand(go1_base.Go1Env):
 
   # Task-Specific Rewards
   def _cost_stay_still(self, qvel: jax.Array) -> jax.Array:
-    return jp.sum(jp.square(qvel[:3])) + jp.square(qvel[5])
+    return jp.sum(jp.square(qvel[:3])) + jp.sum(jp.square(qvel[3:6]))
 
   def _reward_orientation(
-      self, forward_vec: jax.Array, up_vec: jax.Array
+      self, vecA: jax.Array, vecB: jax.Array
   ) -> jax.Array:
-    cos_dist = jp.dot(forward_vec, up_vec)
+    cos_dist = jp.dot(vecA, vecB)
     normalized = 0.5 * cos_dist + 0.5
     return jp.square(normalized)
 

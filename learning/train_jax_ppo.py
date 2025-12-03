@@ -146,12 +146,12 @@ _DETERMINISTIC_RSCOPE = flags.DEFINE_boolean(
 )
 _VIDEO_WIDTH = flags.DEFINE_integer(
     "video_width",
-    640,
+    1920,
     "Width of the rendered video in pixels",
 )
 _VIDEO_HEIGHT = flags.DEFINE_integer(
     "video_height",
-    480,
+    1080,
     "Height of the rendered video in pixels",
 )
 _CAMERA = flags.DEFINE_string(
