@@ -1,37 +1,22 @@
-# SpaceDoggy
-[![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
+# Granular Terrain Module
 
+An simplified implementation of Granular Media Model proposed in *S. Choi et al., “[Learning quadrupedal locomotion on deformable terrain](https://www.science.org/doi/10.1126/scirobotics.ade2256)”, Science Robotics, 2023*
 
-Quadruped Locomotion Under Low-Gravity Environment
+## Setup
 
-Course Project for ROB-GY 7863A Planning, Learning, and Control for Autonomous Space Robots
-
-### Team Member
-- [Zihan Liu](https://github.com/GuoZheXinDeGuang)
-
-- [Yipeng Wang](https://github.com/Epon-Wang)
-### Preparation
-Before setting up the environment, please do the following to install the unitree_sdk2_python:
 ```bash
-cd ~
-sudo apt install python3-pip
-git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
-cd unitree_sdk2_python
-pip3 install -e .
+conda create -n Granular python=3.10
+conda activate Granular
 ```
-### Environment Setup
-1. Conda Environment
-    ```bash
-    conda create -n Doggy python=3.10
-    conda activate Doggy
-    ```
-2. Install [unitree_sdk2_python](https://github.com/unitreerobotics/unitree_sdk2_python)
+Install [unitree_sdk2_python](https://github.com/unitreerobotics/unitree_sdk2_python) and other Dependencies
 
-2. Other Dependencies
-    ```bash
-    pip3 install mujoco noise opencv-python numpy pygame
-    ```
+```bash
+pip3 install mujoco noise opencv-python numpy pygame
+```
 
+## Usage
+
+You can simulate this module with [unitree_mujoco](https://github.com/unitreerobotics/unitree_mujoco)
 
 ### Simulator
 ```bash
@@ -75,7 +60,7 @@ python3 unitree_mujoco.py
 Now you can see the dog walking on the terrain. You can make the dog move faster unsing the keyboard. For the detailed operation please refer to `teleop_keyboard.py`.
 
 ### Testing Script
-First, navigate to `./script/test` and start the testing script
+First, navigate to `./script` and start the testing script
 ```bash
 python3 name_of_example.py
 ```

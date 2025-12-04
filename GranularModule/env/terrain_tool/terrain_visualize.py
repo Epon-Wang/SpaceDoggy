@@ -2,7 +2,7 @@
 import mujoco
 import mujoco.viewer
 
-xml_path = "/home/zihan/SpaceDoggy/env/scene_terrain.xml"  
+xml_path = "/home/epon/SpaceDoggy/env/scene_terrain.xml"  
 
 model = mujoco.MjModel.from_xml_path(xml_path)
 data = mujoco.MjData(model)

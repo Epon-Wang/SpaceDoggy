@@ -110,22 +110,22 @@ def SimulationThread():
 
         # Apply granular media forces to each foot
         # =================================================================================
-        params_FL = granular_modules.get_GM_ParamsFromModel(mj_model, foot_ids["FL"])
-        params_all = {name: params_FL for name in foot_ids.keys()}
+        # params_FL = granular_modules.get_GM_ParamsFromModel(mj_model, foot_ids["FL"])
+        # params_all = {name: params_FL for name in foot_ids.keys()}
 
-        forces = granular_modules.compute_GM_AllFoot(
-            mj_model, mj_data, paramsPerFoot=params_all, monitor=True
-        )
+        # forces = granular_modules.compute_GM_AllFoot(
+        #     mj_model, mj_data, paramsPerFoot=params_all, monitor=False
+        # )
 
-        # F_GM Plotting
-        mj_data.xfrc_applied[:] = 0.0
-        for foot_name, gid in foot_ids.items():
-            body_id = mj_model.geom_bodyid[gid]
-            f_world = forces[foot_name]
-            mj_data.xfrc_applied[body_id, :3] += f_world
+        # # F_GM Plotting
+        # mj_data.xfrc_applied[:] = 0.0
+        # for foot_name, gid in foot_ids.items():
+        #     body_id = mj_model.geom_bodyid[gid]
+        #     f_world = forces[foot_name]
+        #     mj_data.xfrc_applied[body_id, :3] += f_world
 
-            # Store current contact forces for recording
-            current_contact_forces[foot_name] = f_world.copy()
+        #     # Store current contact forces for recording
+        #     current_contact_forces[foot_name] = f_world.copy()
         # =================================================================================
 
         if config.ENABLE_ELASTIC_BAND:
@@ -172,42 +172,42 @@ def PhysicsViewerThread():
 
         # --------------------------------------------------------------------------------
         # Foot Normal Data recording logic
-        curr_t = time.time()
+        # curr_t = time.time()
         
-        if not isRecording:
-            # Start recording
-            rec_init_t = curr_t
-            isRecording = True
-            print("Started recording foot data for 10 seconds...")
+        # if not isRecording:
+        #     # Start recording
+        #     rec_init_t = curr_t
+        #     isRecording = True
+        #     print("Started recording foot data for 10 seconds...")
         
-        if isRecording:
-            elapsed_t = curr_t - rec_init_t
+        # if isRecording:
+        #     elapsed_t = curr_t - rec_init_t
 
-            # Data Recording
-            if elapsed_t <= RECORD_DURATION:
-                footData['time'].append(elapsed_t)
+        #     # Data Recording
+        #     if elapsed_t <= RECORD_DURATION:
+        #         footData['time'].append(elapsed_t)
                 
-                # Record z
-                for foot_name, distData in dist.items():
-                    footData['z'][foot_name].append(distData)
+        #         # Record z
+        #         for foot_name, distData in dist.items():
+        #             footData['z'][foot_name].append(distData)
                 
-                # Record z_dot, z_ddot
-                for foot_name, velAccData in velAcc.items():
-                    footData['z_dot'][foot_name].append(velAccData['z_dot'])
-                    footData['z_ddot'][foot_name].append(velAccData['z_ddot'])
+        #         # Record z_dot, z_ddot
+        #         for foot_name, velAccData in velAcc.items():
+        #             footData['z_dot'][foot_name].append(velAccData['z_dot'])
+        #             footData['z_ddot'][foot_name].append(velAccData['z_ddot'])
                 
-                # Record contact forces
-                for foot_name in FOOT_GEOMS_NAMES:
-                    force_vec = current_contact_forces[foot_name]
-                    force_mag = np.linalg.norm(force_vec)
-                    footData['contact_force'][foot_name].append(force_mag)
-                    footData['contact_force_vec'][foot_name].append(force_vec.copy())
+        #         # Record contact forces
+        #         for foot_name in FOOT_GEOMS_NAMES:
+        #             force_vec = current_contact_forces[foot_name]
+        #             force_mag = np.linalg.norm(force_vec)
+        #             footData['contact_force'][foot_name].append(force_mag)
+        #             footData['contact_force_vec'][foot_name].append(force_vec.copy())
 
-            # Data Visualization
-            else:
-                isRecording = False
-                granular_modules.plotDataPlane2Foot(footData)
-                granular_modules.plot_GM_OnFoot(footData)
+        #     # Data Visualization
+        #     else:
+        #         isRecording = False
+        #         granular_modules.plotDataPlane2Foot(footData)
+        #         granular_modules.plot_GM_OnFoot(footData)
         
         # =================================================================================
 

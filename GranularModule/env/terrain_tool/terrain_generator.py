@@ -5,9 +5,9 @@ import noise
 
 from terrain_para_config import terrain_dict
 
-INPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/terrain_tool/scene.xml"
-OUTPUT_SCENE_PATH = "/home/zihan/SpaceDoggy/env/scene_terrain.xml"
-GO2_ROBOT_PATH = "/home/zihan/SpaceDoggy/env/go2.xml"
+INPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/terrain_tool/scene.xml"
+OUTPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/scene_terrain.xml"
+GO2_ROBOT_PATH = "/home/epon/SpaceDoggy/env/go2.xml"
 
 
 # zyx euler angle to quaternion
@@ -317,10 +317,10 @@ class TerrainGenerator:
 
     def AddHeighFieldFromImage(
             self,
-            position=[1.0, 0.0, 0.0],  # position
+            position=[0.0, 0.0, 0.0],  # position
             euler=[0.0, -0.0, 0.0],  # attitude
-            size=[100.0, 100.0],  # width and length
-            height_scale=1.5,  # max height
+            size=[10.0, 10.0],  # width and length
+            height_scale=1.0,  # max height
             negative_height=0.1,  # height in the negative direction of z axis
             input_img='/home/epon/SpaceDoggy/env/height_field.png',
             output_hfield_image="height_field.png",
@@ -386,11 +386,11 @@ if __name__ == "__main__":
     tg.SetGravity()
     
     # Set robot spawn position
-    tg.SetRobotSpawnPosition()
+    tg.SetRobotSpawnPosition(position=[10.0, 10.0, 0.445])
     
     # Add reference plane (green, semi-transparent)
     tg.AddReferencePlane(
-        position=[0, 0, 0.05],
+        position=[0, 0, 0.7],
         size=[10, 10, 0.001],
         rgba=[0, 1, 0, 0.15])
     
@@ -406,5 +406,7 @@ if __name__ == "__main__":
     # tg.AddHeighFieldFromImage(
     #     position=[0.0, 0.0, 0.0],
     #     size=[10.0,10.0])
+
+    tg.AddHeighFieldFromImage()
 
     tg.Save()
