@@ -150,9 +150,10 @@ def rsl_rl_config(
   if env_name in (
       "Go1Getup",
       "Go1JoystickFlatTerrain",
-      "Go1Handstand",
   ):
     rl_config.max_iterations = 1000
+  if env_name == "Go1Handstand":
+    rl_config.max_iterations = 3000
   if env_name == "Go1JoystickFlatTerrain":
     rl_config.algorithm.learning_rate = 3e-4
     rl_config.algorithm.schedule = "fixed"

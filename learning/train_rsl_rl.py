@@ -71,7 +71,7 @@ _USE_WANDB = flags.DEFINE_boolean(
     "Use Weights & Biases for logging (ignored in play-only mode).",
 )
 _SUFFIX = flags.DEFINE_string("suffix", None, "Suffix for the experiment name.")
-_SEED = flags.DEFINE_integer("seed", 1, "Random seed.")
+_SEED = flags.DEFINE_integer("seed", 114514, "Random seed.")
 _NUM_ENVS = flags.DEFINE_integer("num_envs", 4096, "Number of parallel envs.")
 _DEVICE = flags.DEFINE_string("device", "cuda:0", "Device for training.")
 _MULTI_GPU = flags.DEFINE_boolean(
