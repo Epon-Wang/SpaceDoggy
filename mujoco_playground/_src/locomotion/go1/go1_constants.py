@@ -29,12 +29,14 @@ FULL_FLAT_TERRAIN_XML = ROOT_PATH / "xmls" / "scene_mjx_flat_terrain.xml"
 FULL_COLLISIONS_FLAT_TERRAIN_XML = (
     ROOT_PATH / "xmls" / "scene_mjx_fullcollisions_flat_terrain.xml"
 )
+GRANULAR_SCENE_XML = ROOT_PATH / "xmls" / "scene_terrain.xml"
 
 
 def task_to_xml(task_name: str) -> epath.Path:
   return {
       "flat_terrain": FEET_ONLY_FLAT_TERRAIN_XML,
       "rough_terrain": FEET_ONLY_ROUGH_TERRAIN_XML,
+      "granular_terrain": GRANULAR_SCENE_XML,
   }[task_name]
 
 

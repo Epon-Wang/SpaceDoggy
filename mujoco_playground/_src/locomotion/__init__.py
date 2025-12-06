@@ -38,6 +38,7 @@ _envs = {
     "Go1Getup": go1_getup.Getup,
     "Go1Handstand": go1_handstand.Handstand,
     "Go1Footstand": go1_handstand.Footstand,
+    "Go1HandstandWithGranular": go1_handstand.LandingWithGranular,
 }
 
 _cfgs = {
@@ -46,6 +47,7 @@ _cfgs = {
     "Go1Getup": go1_getup.default_config,
     "Go1Handstand": go1_handstand.default_config,
     "Go1Footstand": go1_handstand.default_config,
+    "Go1HandstandWithGranular": go1_handstand.default_config,
 }
 
 _randomizer = {
@@ -54,6 +56,7 @@ _randomizer = {
     "Go1Getup": go1_randomize.domain_randomize,
     "Go1Handstand": go1_randomize.domain_randomize,
     "Go1Footstand": go1_randomize.domain_randomize,
+    "Go1HandstandWithGranular": go1_randomize.domain_randomize,
 }
 
 

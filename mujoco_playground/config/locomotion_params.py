@@ -60,7 +60,7 @@ def brax_ppo_config(
         value_obs_key="privileged_state",
     )
 
-  elif env_name in ("Go1Handstand", "Go1Footstand"):
+  elif env_name in ("Go1Handstand", "Go1Footstand", "Go1HandstandWithGranular"):
     rl_config.num_timesteps = 100_000_000
     rl_config.num_evals = 5
     rl_config.network_factory = config_dict.create(

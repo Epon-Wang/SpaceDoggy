@@ -1,0 +1,62 @@
+<mujoco model="go landing scene">
+  <include file="go1_mjx.xml" />
+
+  <statistic center="0 0 0.1" extent="0.8" />
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <rgba haze="0.15 0.25 0.35 1" />
+    <global azimuth="-130" elevation="-20" />
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
+    <geom name="ref_plane" type="plane" pos="0 0 0.05" quat="1 0 0 0" size="10 10 0.001" rgba="0 1 0 0.15" contype="0" conaffinity="0" group="1" />
+  </worldbody>
+
+  <!-- Include sensor definitions used by Go1 environments -->
+  <include file="sensor_feet.xml"/>
+  <include file="sensor_fullcollision.xml"/>
+
+  <!-- Keyframes (used by Landing/Handstand/Footstand tasks) -->
+  <keyframe>
+    <key name="home" qpos="
+    0 0 0.278
+    1 0 0 0
+    0.1 0.9 -1.8
+    -0.1 0.9 -1.8
+    0.1 0.9 -1.8
+    -0.1 0.9 -1.8"
+      ctrl="0.1 0.9 -1.8 -0.1 0.9 -1.8 0.1 0.9 -1.8 -0.1 0.9 -1.8"/>
+    <key name="home_higher" qpos="0 0 0.31 1 0 0 0 0 0.82 -1.63 0 0.82 -1.63 0 0.82 -1.63 0 0.82 -1.63"
+      ctrl="0 0.82 -1.63 0 0.82 -1.63 0 0.82 -1.63 0 0.82 -1.63"/>
+    <key name="pre_recovery"
+      qpos="-0.0318481 -0.000215369 0.0579031 1 -2.70738e-05 6.06169e-05 0.000231261 -0.352275 1.18554 -2.80738 0.360892 1.1806 -2.80281 -0.381197 1.16812 -2.79123 0.391054 1.1622 -2.78576"
+      ctrl="-0.352275 1.18554 -2.80738 0.360892 1.1806 -2.80281 -0.381197 1.16812 -2.79123 0.391054 1.1622 -2.78576"/>
+    <key name="footstand"
+      qpos="0 0 0.54 0.8 0 -0.8 0 0 0.82 -1.6 0 0.82 -1.68 0 1.82 -1.16 0.0 1.82 -1.16"
+      ctrl="0 0.82 -1.6 0 0.82 -1.68 0 1.82 -1.16 0.0 1.82 -1.16"/>
+    <key name="handstand"
+      qpos="0 0 0.54 0.8 0 0.8 0 0 -0.686 -1.16 0 -0.686 -1.16 0 1.7 -1.853 0 1.7 -1.853"
+      ctrl="0 -0.686 -1.16 0 -0.686 -1.16 0 1.7 -1.853 0 1.7 -1.853"/>
+  </keyframe>
+
+  <option gravity="0.0 0.0 -9.81" />
+  <custom><numeric name="gm_theta" data="0.5236" />
+<numeric name="gm_nu" data="0.4" />
+<numeric name="gm_z0" data="0.0" />
+<numeric name="gm_phi" data="0.6" />
+<numeric name="gm_rho" data="3000.0" />
+<numeric name="gm_cg" data="1.0" />
+<numeric name="gm_cd" data="1.2" />
+<numeric name="gm_sigma_flat" data="200000.0" />
+<numeric name="gm_eps_f" data="0.0001" />
+<numeric name="gm_sigma_cone" data="100000.0" />
+</custom></mujoco>
