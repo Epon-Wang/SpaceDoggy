@@ -5,9 +5,9 @@ import noise
 
 from terrain_para_config import terrain_dict
 
-INPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/terrain_tool/scene.xml"
-OUTPUT_SCENE_PATH = "/home/epon/SpaceDoggy/env/scene_terrain.xml"
-GO2_ROBOT_PATH = "/home/epon/SpaceDoggy/env/go2.xml"
+INPUT_SCENE_PATH = "env/terrain_tool/scene.xml"
+OUTPUT_SCENE_PATH = "env/scene_terrain.xml"
+GO2_ROBOT_PATH = "env/go2.xml"
 
 
 # zyx euler angle to quaternion

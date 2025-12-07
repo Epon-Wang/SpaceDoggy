@@ -86,13 +86,16 @@ class Handstand(go1_base.Go1Env):
       self,
       config:           config_dict.ConfigDict = default_config(),
       config_overrides: Optional[Dict[str, Union[str, int, list[Any]]]] = None,
+      xml_path:         Optional[str] = None,
       ) -> None:
     
+    if xml_path is None:
+      xml_path = consts.FULL_FLAT_TERRAIN_XML.as_posix()
+    
     super().__init__(
-        # xml_path=consts.FULL_FLAT_TERRAIN_XML.as_posix(),
-        xml_path=consts.GRANULAR_SCENE_XML.as_posix(),
-        config=config,
-        config_overrides=config_overrides,
+        xml_path=           xml_path,
+        config=             config,
+        config_overrides=   config_overrides,
     )
     
     # NOTE: Really Small Gravity
@@ -578,8 +581,9 @@ class LandingWithGranular(Handstand):
       config_overrides: Optional[Dict[str, Union[str, int, list[Any]]]] = None,
       ) -> None:
     super().__init__(
-        config=config,
-        config_overrides=config_overrides,
+        config=             config,
+        config_overrides=   config_overrides,
+        xml_path=           consts.GRANULAR_SCENE_XML.as_posix(),
     )
     self._init_granular_dynamics()
 

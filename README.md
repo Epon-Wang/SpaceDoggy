@@ -1,4 +1,4 @@
-# SpaceDoggy: Reinforcement Learning for Quadrupedal Landing Control in Low-Gravity Environments
+# SpaceDoggy
 
 Course Project of *ROB-GY 7863 Plan, Learn, and Control Autonomous Space Robots*
 
@@ -7,6 +7,10 @@ This project studies robust quadrupedal landings on granular terrains under low 
 - The [Granular Terrain Model](GranularModule/README.md) is built and tested with **Unitree Go2**
 
 - Policy trainings are conducted with **Unitree Go1** in [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground/)
+  - **Attitude Control Policy**
+    <img src="assets/ReorientationTestings/Reorientation-20251204-222058.gif" alt="reorientation" style="zoom:50%; display:block; margin:auto;" />
+  - **Landing Control Policy**
+    <img src="assets/LandingTestings/rsl-rl_LandingGranular-20251205-224244.gif" alt="landing" style="zoom:50%; display:block; margin:auto;" />
 
 ## Collaborators
 - [Yipeng Wang](https://github.com/Epon-Wang)
@@ -27,7 +31,7 @@ python -c "import jax; print(jax.default_backend())"
 ```
 Install MuJoCo Playground
 ```bash
-cd mujoco_playground
+cd SpaceDoggy
 pip install -e ".[all]"
 # Test Installation
 python -c "import mujoco_playground"
@@ -44,7 +48,7 @@ pip install rscope
 
 This project could be trained with two different implementations of **PPO** algorithm, logs and checkpoints are saved in `logs` directory.
 
-- To train with **[RSL-RL](https://github.com/leggedrobotics/rsl_rl)** (Recommended)
+- To train with **[RSL-RL](https://github.com/leggedrobotics/rsl_rl)** (*Recommended* )
 
   ```bash
   python learning/train_rsl_rl.py --env_name Go1Handstand --use_wandb=True
@@ -53,7 +57,7 @@ This project could be trained with two different implementations of **PPO** algo
 - To train with **[Brax](https://github.com/google/brax)**
 
   ```bash
-  python learning/train_jax_ppo.py --env_name Go1Handstand --use_wandb=True --num_evals=1000 --num_timesteps=10000000
+  python learning/train_jax_ppo.py --env_name Go1Handstand --use_wandb=True
   ```
 
 ### Evaluation
@@ -71,7 +75,7 @@ Render the behaviour from the resulting policy with top tracing camera
 - Render a policy trained with **Brax**
 
   ```bash
-  python learning/train_jax_ppo.py --env_name=Go1Handstand --play_only=True --load_checkpoint_path=path/to/run_name/checkpoints --camera=top  --num_videos=1 --episode_length=2500
+  python learning/train_jax_ppo.py --env_name=Go1Handstand --play_only=True --load_checkpoint_path=path/to/run_name/checkpoints --camera=top  --num_videos=1 --episode_length=500
   ```
 
 where `run_name` could be found at
@@ -93,4 +97,18 @@ Alternatively, you can add `--load_checkpoint_path=...` to evaluate (and keep tr
 In a separate terminal
 ```bash
 python -m rscope
+```
+
+## Citation
+
+This project is built upon the codebase of MuJoCo Playground
+
+```bibtex
+@misc{mujoco_playground_2025,
+  title = {MuJoCo Playground: An open-source framework for GPU-accelerated robot learning and sim-to-real transfer.},
+  author = {Zakka, Kevin and Tabanpour, Baruch and Liao, Qiayuan and Haiderbhai, Mustafa and Holt, Samuel and Luo, Jing Yuan and Allshire, Arthur and Frey, Erik and Sreenath, Koushil and Kahrs, Lueder A. and Sferrazza, Carlo and Tassa, Yuval and Abbeel, Pieter},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/google-deepmind/mujoco_playground}
+}
 ```

@@ -4,7 +4,7 @@ import math
 from typing import Tuple
 
 # ---- Utility ---------------------------------------------------------------
-SAVE_PATH = "/home/epon/SpaceDoggy/env/height_field.png"
+SAVE_PATH = "env/height_field.png"
 try:
     RES_BICUBIC = Image.Resampling.BICUBIC
 except AttributeError:

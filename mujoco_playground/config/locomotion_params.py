@@ -50,39 +50,8 @@ def brax_ppo_config(
       num_resets_per_eval=10,
   )
 
-  if env_name in ("Go1JoystickFlatTerrain", "Go1JoystickRoughTerrain"):
-    rl_config.num_timesteps = 200_000_000
-    rl_config.num_evals = 10
-    rl_config.network_factory = config_dict.create(
-        policy_hidden_layer_sizes=(512, 256, 128),
-        value_hidden_layer_sizes=(512, 256, 128),
-        policy_obs_key="state",
-        value_obs_key="privileged_state",
-    )
-
-  elif env_name in ("Go1Handstand", "Go1Footstand", "Go1HandstandWithGranular"):
+  if env_name in ("Go1Handstand", "Go1Footstand", "Go1HandstandWithGranular"):
     rl_config.num_timesteps = 100_000_000
-    rl_config.num_evals = 5
-    rl_config.network_factory = config_dict.create(
-        policy_hidden_layer_sizes=(512, 256, 128),
-        value_hidden_layer_sizes=(512, 256, 128),
-        policy_obs_key="state",
-        value_obs_key="privileged_state",
-    )
-
-  elif env_name == "Go1Backflip":
-    rl_config.num_timesteps = 200_000_000
-    rl_config.num_evals = 10
-    rl_config.discounting = 0.95
-    rl_config.network_factory = config_dict.create(
-        policy_hidden_layer_sizes=(512, 256, 128),
-        value_hidden_layer_sizes=(512, 256, 128),
-        policy_obs_key="state",
-        value_obs_key="privileged_state",
-    )
-
-  elif env_name == "Go1Getup":
-    rl_config.num_timesteps = 50_000_000
     rl_config.num_evals = 5
     rl_config.network_factory = config_dict.create(
         policy_hidden_layer_sizes=(512, 256, 128),
@@ -147,17 +116,9 @@ def rsl_rl_config(
       resume_path=None,  # updated from load_run and chkpt
   )
 
-  if env_name in (
-      "Go1Getup",
-      "Go1JoystickFlatTerrain",
-  ):
-    rl_config.max_iterations = 1000
   if env_name == "Go1Handstand":
     rl_config.max_iterations = 1500
   if env_name == "Go1HandstandWithGranular":
     rl_config.max_iterations = 3000
-  if env_name == "Go1JoystickFlatTerrain":
-    rl_config.algorithm.learning_rate = 3e-4
-    rl_config.algorithm.schedule = "fixed"
 
   return rl_config

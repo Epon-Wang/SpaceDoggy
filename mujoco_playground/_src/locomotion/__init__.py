@@ -22,38 +22,23 @@ from ml_collections import config_dict
 from mujoco import mjx
 
 from mujoco_playground._src import mjx_env
-from mujoco_playground._src.locomotion.go1 import getup as go1_getup
 from mujoco_playground._src.locomotion.go1 import handstand as go1_handstand
-from mujoco_playground._src.locomotion.go1 import joystick as go1_joystick
 from mujoco_playground._src.locomotion.go1 import randomize as go1_randomize
 
 
 _envs = {
-    "Go1JoystickFlatTerrain": functools.partial(
-        go1_joystick.Joystick, task="flat_terrain"
-    ),
-    "Go1JoystickRoughTerrain": functools.partial(
-        go1_joystick.Joystick, task="rough_terrain"
-    ),
-    "Go1Getup": go1_getup.Getup,
     "Go1Handstand": go1_handstand.Handstand,
     "Go1Footstand": go1_handstand.Footstand,
     "Go1HandstandWithGranular": go1_handstand.LandingWithGranular,
 }
 
 _cfgs = {
-    "Go1JoystickFlatTerrain": go1_joystick.default_config,
-    "Go1JoystickRoughTerrain": go1_joystick.default_config,
-    "Go1Getup": go1_getup.default_config,
     "Go1Handstand": go1_handstand.default_config,
     "Go1Footstand": go1_handstand.default_config,
     "Go1HandstandWithGranular": go1_handstand.default_config,
 }
 
 _randomizer = {
-    "Go1JoystickFlatTerrain": go1_randomize.domain_randomize,
-    "Go1JoystickRoughTerrain": go1_randomize.domain_randomize,
-    "Go1Getup": go1_randomize.domain_randomize,
     "Go1Handstand": go1_randomize.domain_randomize,
     "Go1Footstand": go1_randomize.domain_randomize,
     "Go1HandstandWithGranular": go1_randomize.domain_randomize,

@@ -1,6 +1,8 @@
-# Granular Terrain Module
+# Granular Terrain Model
 
 An simplified implementation of Granular Media Model proposed in *S. Choi et al., “[Learning quadrupedal locomotion on deformable terrain](https://www.science.org/doi/10.1126/scirobotics.ade2256)”, Science Robotics, 2023*
+
+> **[WARNING]** The folder `/GranularModule` is ONLY for testing, any modification made within this folder WILL NOT affect the granular module used in policy training
 
 ## Setup
 
@@ -68,3 +70,7 @@ Then, navigate to `./env/simulate_python` to start the simulator
 ```bash
 python3 unitree_mujoco.py
 ```
+
+## Citation
+
+The content in this folder is built upon [unitree_mujoco](https://github.com/unitreerobotics/unitree_mujoco)
