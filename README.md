@@ -8,8 +8,11 @@ This project studies robust quadrupedal landings on granular terrains under low 
 
 - Policy trainings are conducted with **Unitree Go1** in [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground/)
   - **Attitude Control Policy**
+
     <img src="assets/ReorientationTestings/Reorientation-20251204-222058.gif" alt="reorientation" style="zoom:30%; display:block; margin:auto;" />
+
   - **Landing Control Policy**
+  
     <img src="assets/LandingTestings/rsl-rl_LandingGranular-20251205-224244.gif" alt="landing" style="zoom:30%; display:block; margin:auto;" />
 
 ## Collaborators
