@@ -1,4 +1,17 @@
-![Banner for playground](https://github.com/google-deepmind/mujoco_playground/blob/main/assets/banner.png?raw=true)
+# SpaceDoggy: Reinforcement Learning for Quadrupedal Landing Control in Low-Gravity Environments
+
+Course Project of *ROB-GY 7863 Plan, Learn, and Control Autonomous Space Robots*
+
+This project studies robust quadrupedal landings on granular terrains under low gravity and diverse initial poses
+
+- The [Granular Terrain Model](GranularModule/README.md) is built and tested with **Unitree Go2**
+
+- Policy trainings are conducted with **Unitree Go1** in [MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground/)
+
+## Collaborators
+- [Yipeng Wang](https://github.com/Epon-Wang)
+- [Zihan Liu](https://github.com/GuoZheXinDeGuang)
+
 
 ## Installation From Source
 
@@ -80,19 +93,4 @@ Alternatively, you can add `--load_checkpoint_path=...` to evaluate (and keep tr
 In a separate terminal
 ```bash
 python -m rscope
-```
-
-
-## Citation
-
-This repo is adapted from MuJoCo Playground
-
-```bibtex
-@misc{mujoco_playground_2025,
-  title = {MuJoCo Playground: An open-source framework for GPU-accelerated robot learning and sim-to-real transfer.},
-  author = {Zakka, Kevin and Tabanpour, Baruch and Liao, Qiayuan and Haiderbhai, Mustafa and Holt, Samuel and Luo, Jing Yuan and Allshire, Arthur and Frey, Erik and Sreenath, Koushil and Kahrs, Lueder A. and Sferrazza, Carlo and Tassa, Yuval and Abbeel, Pieter},
-  year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/google-deepmind/mujoco_playground}
-}
 ```
