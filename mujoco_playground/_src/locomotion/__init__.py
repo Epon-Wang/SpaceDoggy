@@ -22,26 +22,27 @@ from ml_collections import config_dict
 from mujoco import mjx
 
 from mujoco_playground._src import mjx_env
-from mujoco_playground._src.locomotion.go1 import handstand as go1_handstand
+from mujoco_playground._src.locomotion.go1 import reorientation as go1_reorientation
+from mujoco_playground._src.locomotion.go1 import landing as go1_landing
 from mujoco_playground._src.locomotion.go1 import randomize as go1_randomize
 
 
 _envs = {
-    "Go1Handstand": go1_handstand.Handstand,
-    "Go1Footstand": go1_handstand.Footstand,
-    "Go1HandstandWithGranular": go1_handstand.LandingWithGranular,
+    "Go1Reorientation":   go1_reorientation.Reorientation,
+    "Go1LandingFlat":     go1_landing.Landing_Flat,
+    "Go1LandingGranular": go1_landing.Landing_Granular,
 }
 
 _cfgs = {
-    "Go1Handstand": go1_handstand.default_config,
-    "Go1Footstand": go1_handstand.default_config,
-    "Go1HandstandWithGranular": go1_handstand.default_config,
+    "Go1Reorientation":   go1_reorientation.default_config,
+    "Go1LandingFlat":     go1_landing.default_config,
+    "Go1LandingGranular": go1_landing.default_config,
 }
 
 _randomizer = {
-    "Go1Handstand": go1_randomize.domain_randomize,
-    "Go1Footstand": go1_randomize.domain_randomize,
-    "Go1HandstandWithGranular": go1_randomize.domain_randomize,
+    "Go1Reorientation":   go1_randomize.domain_randomize,
+    "Go1LandingFlat":     go1_randomize.domain_randomize,
+    "Go1LandingGranular": go1_randomize.domain_randomize,
 }
 
 

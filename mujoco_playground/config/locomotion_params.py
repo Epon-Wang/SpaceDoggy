@@ -50,7 +50,7 @@ def brax_ppo_config(
       num_resets_per_eval=10,
   )
 
-  if env_name in ("Go1Handstand", "Go1Footstand", "Go1HandstandWithGranular"):
+  if env_name in ("Go1Reorientation", "Go1LandingFlat", "Go1LandingGranular"):
     rl_config.num_timesteps = 100_000_000
     rl_config.num_evals = 5
     rl_config.network_factory = config_dict.create(
@@ -116,9 +116,12 @@ def rsl_rl_config(
       resume_path=None,  # updated from load_run and chkpt
   )
 
-  if env_name == "Go1Handstand":
+  if env_name == "Go1Reorientation":
     rl_config.max_iterations = 1500
-  if env_name == "Go1HandstandWithGranular":
+  if env_name in (
+      "Go1LandingFlat",
+      "Go1LandingGranular",
+  ):
     rl_config.max_iterations = 3000
 
   return rl_config

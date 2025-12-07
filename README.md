@@ -1,8 +1,8 @@
 # SpaceDoggy
 
-Course Project of *ROB-GY 7863 Plan, Learn, and Control Autonomous Space Robots*
+Course Final Project of *ROB-GY 7863 Plan, Learn, and Control Autonomous Space Robots*, instructed by Prof. Benjamin Riviere
 
-This project studies robust quadrupedal landings on granular terrains under low gravity and diverse initial poses
+This project studies robust quadrupedal landing strategies on granular terrain under reduced gravity with diverse initial poses. Proximal Policy Optimization (PPO) is employed to train the control policies.
 
 - The [Granular Terrain Model](GranularModule/README.md) is built and tested with **Unitree Go2**
 
@@ -12,7 +12,7 @@ This project studies robust quadrupedal landings on granular terrains under low 
     <img src="assets/ReorientationTestings/Reorientation-20251204-222058.gif" alt="reorientation" style="zoom:30%; display:block; margin:auto;" />
 
   - **Landing Control Policy**
-  
+
     <img src="assets/LandingTestings/rsl-rl_LandingGranular-20251205-224244.gif" alt="landing" style="zoom:30%; display:block; margin:auto;" />
 
 ## Collaborators
@@ -20,7 +20,7 @@ This project studies robust quadrupedal landings on granular terrains under low 
 - [Zihan Liu](https://github.com/GuoZheXinDeGuang)
 
 
-## Installation From Source
+## Installation
 
 ```bash
 conda create -n Doggy python=3.11
@@ -44,26 +44,29 @@ Install rscope for interactive training visualization
 pip install rscope
 ```
 
-## Running from CLI
+## Training
 
-
-### Training
-
-This project could be trained with two different implementations of **PPO** algorithm, logs and checkpoints are saved in `logs` directory.
+This project could be trained with two different implementations of **PPO** algorithm, logs and checkpoints are saved in `logs` directory
 
 - To train with **[RSL-RL](https://github.com/leggedrobotics/rsl_rl)** (*Recommended* )
 
   ```bash
-  python learning/train_rsl_rl.py --env_name Go1Handstand --use_wandb=True
+  python learning/train_rsl_rl.py --env_name <task_name> --use_wandb=True
   ```
 
 - To train with **[Brax](https://github.com/google/brax)**
 
   ```bash
-  python learning/train_jax_ppo.py --env_name Go1Handstand --use_wandb=True
+  python learning/train_jax_ppo.py --env_name <task_name> --use_wandb=True
   ```
+- Supported Tasks
+  | `<task_name>` | Task Description |
+  |-------|-------------|
+  |`Go1Reorientation`   |Zero-Gravity Attitude Control|
+  |`Go1LandingFlat`     |Low-Gravity Landing Control on Flat Terrain|
+  |`Go1LandingGranular` |Low-Gravity Landing Control on Granular Terrain|
 
-### Evaluation
+## Evaluation
 
 Render the behaviour from the resulting policy with top tracing camera
 
@@ -72,27 +75,27 @@ Render the behaviour from the resulting policy with top tracing camera
   > **[NOTE]** Please make sure the folder of the run to be evaluated is under the directory of `logs/rslrl-training-logs`
 
   ```bash
-  python learning/train_rsl_rl.py --env_name Go1Handstand --play_only --load_run_name <run_name> --camera=top
+  python learning/train_rsl_rl.py --env_name <task_name> --play_only --load_run_name <run_name> --camera=top
   ```
 
 - Render a policy trained with **Brax**
 
   ```bash
-  python learning/train_jax_ppo.py --env_name=Go1Handstand --play_only=True --load_checkpoint_path=path/to/run_name/checkpoints --camera=top  --num_videos=1 --episode_length=500
+  python learning/train_jax_ppo.py --env_name=<task_name> --play_only=True --load_checkpoint_path=path/to/run_name/checkpoints --camera=top  --num_videos=1 --episode_length=500
   ```
 
 where `run_name` could be found at
 - `Run name` printed in the real-time console of **RSL-RL**
 - `Experiment Name` printed at the begining of the training of **Brax**
 
-### Interactive Visualization
+## Interactive Visualization
 
 > **[NOTE]** This function is ONLY available for **Brax**
 
 Interactively view trajectories throughout training
 
 ```bash
-python learning/train_jax_ppo.py --env_name Go1Handstand --rscope_envs 16 --run_evals=False --deterministic_rscope=True
+python learning/train_jax_ppo.py --env_name <task_name> --rscope_envs 16 --run_evals=False --deterministic_rscope=True
 ```
 
 Alternatively, you can add `--load_checkpoint_path=...` to evaluate (and keep training) a trained policy
