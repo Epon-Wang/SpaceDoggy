@@ -29,6 +29,7 @@ conda activate Doggy
 Install JAX
 ```bash
 pip install -U "jax[cuda12]"
+
 # Test Installation, should print "gpu"
 python -c "import jax; print(jax.default_backend())" 
 ```
@@ -36,6 +37,7 @@ Install MuJoCo Playground
 ```bash
 cd SpaceDoggy
 pip install -e ".[all]"
+
 # Test Installation
 python -c "import mujoco_playground"
 ```
