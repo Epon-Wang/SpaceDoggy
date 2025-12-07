@@ -51,13 +51,17 @@ This project could be trained with two different implementations of **PPO** algo
 - To train with **[RSL-RL](https://github.com/leggedrobotics/rsl_rl)** (*Recommended* )
 
   ```bash
-  python learning/train_rsl_rl.py --env_name <task_name> --use_wandb=True
+  python learning/train_rsl_rl.py \
+  --env_name <task_name> \
+  --use_wandb=True
   ```
 
 - To train with **[Brax](https://github.com/google/brax)**
 
   ```bash
-  python learning/train_jax_ppo.py --env_name <task_name> --use_wandb=True
+  python learning/train_jax_ppo.py \
+  --env_name <task_name> \
+  --use_wandb=True
   ```
 - Supported Tasks
   | `<task_name>` | Task Description |
@@ -75,13 +79,23 @@ Render the behaviour from the resulting policy with top tracing camera
   > **[NOTE]** Please make sure the folder of the run to be evaluated is under the directory of `logs/rslrl-training-logs`
 
   ```bash
-  python learning/train_rsl_rl.py --env_name <task_name> --play_only --load_run_name <run_name> --camera=top
+  python learning/train_rsl_rl.py \
+  --env_name <task_name> \
+  --play_only \
+  --load_run_name <run_name> \
+  --camera=top
   ```
 
 - Render a policy trained with **Brax**
 
   ```bash
-  python learning/train_jax_ppo.py --env_name=<task_name> --play_only=True --load_checkpoint_path=path/to/run_name/checkpoints --camera=top  --num_videos=1 --episode_length=500
+  python learning/train_jax_ppo.py \
+  --env_name=<task_name> \
+  --play_only=True \
+  --load_checkpoint_path=path/to/run_name/checkpoints \
+  --camera=top \
+  --num_videos=1 \
+  --episode_length=500
   ```
 
 where `run_name` could be found at
@@ -95,7 +109,11 @@ where `run_name` could be found at
 Interactively view trajectories throughout training
 
 ```bash
-python learning/train_jax_ppo.py --env_name <task_name> --rscope_envs 16 --run_evals=False --deterministic_rscope=True
+python learning/train_jax_ppo.py \
+--env_name <task_name> \
+--rscope_envs 16 \
+--run_evals=False \
+--deterministic_rscope=True
 ```
 
 Alternatively, you can add `--load_checkpoint_path=...` to evaluate (and keep training) a trained policy
